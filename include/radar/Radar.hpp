@@ -12,13 +12,15 @@ class Radar {
     private:
     Vector2D position;//Radar's own position in 2D space (x, y coordinates)
     double range;//Maximum detection radius (how far the radar can "see")
-    Gun defencegun; //The defensive weapon system controlled by this radar
+    Gun defenseGun; //The defensive weapon system controlled by this radar
     
     //the initial position of radar(0,0) and its range(1000)
     public:
     Radar(const Vector2D& pos = Vector2D(0, 0), double range = 1000.0);
 
         Vector2D getPosition() const { return position; }
+        double getRange() const { return range; }
+
         Gun getDefenseGun() const { return defenseGun; }
         bool isInRange(const Target& target) const; //Uses Euclidean distance calculation between radar position and target position. If distance <= radar range, the target is detectable.
         

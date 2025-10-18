@@ -1,5 +1,12 @@
-#ifndef MATHUTILS.HPP
-#define MATHUTILS.HPP
+#ifndef MATHUTILS_HPP
+#define MATHUTILS_HPP
+
+#include <cmath>
+#include <string>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #include <cmath>
 #include <string>
@@ -21,7 +28,7 @@ struct Vector2D{
 //class for common math operations
 class MathUtils{
     public:
-    //covert angel from degrees to radian
+    //covert angel from degrees to radian 
     static double degreesToRadian(double degrees){
         return degrees * (M_PI/180.0);//M_PI is the constant PI
     }
