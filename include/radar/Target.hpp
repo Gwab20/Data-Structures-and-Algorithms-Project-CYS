@@ -3,6 +3,28 @@
 
 #include "../utils/MathUtils.hpp"
 #include <string>
+#include <iostream>
+
+
+struct DetectionEvent {
+    string targetId; //stores unique identifier for targets that are detected
+    bool isEntry; //indicator to tell if target is entering range
+    double timestamp;//store time of detection
+};
+
+//Queue node for detection event
+struct QueueNode{
+    DetectionEvent data; //Stores(in data var) the actual detection event in the queue node.
+    QueueNode* next; //point to the next node
+    QueueNode(const DetectionEvent& event) : data(event), next(nullptr){}
+};
+
+//circular linked list for sweep node
+struct SweepNode{
+    double angel; //stores angular position
+    SweepNode* next;//points to the next angle/position
+    SweepNode(double a): angel(a), next(nullptr){} //constructor to initilize values
+};
 
 enum class TargetType {
     UNKNOWN,

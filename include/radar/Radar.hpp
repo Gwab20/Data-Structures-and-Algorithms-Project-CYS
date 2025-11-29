@@ -14,9 +14,45 @@ class Radar {
     double range;//Maximum detection radius (how far the radar can "see")
     Gun defenseGun; //The defensive weapon system controlled by this radar
     
+  //implimenting queue
+    QueueNode* queueFront;
+    QueueNode* queueRear;
+    int queueSize;
+    static const int MAX_QUEUE_SIZE=50;
+
+  //circular linked list for sweep
+  SweepNode* sweepHead;
+  SweepNode* currentSweep;
+  double sweepAngle;
+  
+  //current targets detected
+  static const int MAX_DETECTED_TARGETS = 20;
+    Target detectedTargets[MAX_DETECTED_TARGETS];
+    int currentDetectedCount;
+
     //the initial position of radar(0,0) and its range(1000)
     public:
     Radar(const Vector2D& pos = Vector2D(0, 0), double range = 1000.0);
+        ~Radar(); //destructor
+
+        //Queue operations
+        void enqueueEvent(const DetectionEvent& event);
+        DetectionEvent dequeueEvent();
+        bool isQueueEmpty() const;
+        bool isQueueFull() const;
+        void clearQueue();
+
+        //sweep operations
+        void initializeSweep();
+        void advanceSweep();
+        double getCurrentSweepAngle() const;
+
+        //detection system
+        void updateDetections(Target* allTargets, int targetCount);
+        void printDetectionEvents();
+
+
+         //PHASE 1/2 imp
 
         Vector2D getPosition() const { return position; }
         double getRange() const { return range; }
