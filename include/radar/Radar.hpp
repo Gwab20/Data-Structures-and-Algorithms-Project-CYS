@@ -22,9 +22,9 @@ class Radar {
         double getRange() const { return range; }
 
         Gun getDefenseGun() const { return defenseGun; }
-        bool isInRange(const Target& target) const; //Uses Euclidean distance calculation between radar position and target position. If distance <= radar range, the target is detectable.
+        bool isInRange(const Target& target) const; //Uses distance calculation between radar position and target position. If distance <= radar range, the target is detectable.
         
-        /*This is the main analysis function that calculates all essential targeting data:
+        /*analysis function that calculates all essential targeting data:
           Horizontal distance: Straight-line range to target
           Displacement: Magnitude of position difference vector  
           Bearing: Precise angle from radar to target

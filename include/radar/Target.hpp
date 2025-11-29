@@ -16,9 +16,17 @@ private:
     TargetType type;
     std::string id;
 
+    //phase 2
+    static const int HISTORY_SIZE = 10;
+    Vector2D positionHistory[HISTORY_SIZE];
+    int historyIndex;
+    Vector2D velocity;
+    Vector2D acceleration;
+    double lastUpdateTime;
+
 public:
     Target(const Vector2D& pos = Vector2D(), double h = 0.0, 
-           TargetType t = TargetType::UNKNOWN, const std::string& id = "");
+           TargetType t = TargetType::UNKNOWN, const string& id = "");
     
     // Getters
     Vector2D getPosition() const { return position; }
@@ -41,7 +49,16 @@ public:
     double calculateBearingFrom(const Vector2D& origin) const;
     
     // Get compass direction from origin
-    std::string getCompassDirectionFrom(const Vector2D& origin) const;
+    string getCompassDirectionFrom(const Vector2D& origin) const;
+    
+    //phase2
+    void updatePosition(const Vector2D& newPos, double currentTime);
+    void calculateKinematics(double currentTime);
+    Vector2D getVelocity() const { return velocity; }
+    Vector2D getAcceleration() const { return acceleration; }
+    double getSpeed() const { return velocity.magnitude(); }
+
+
 };
 
 #endif

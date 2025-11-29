@@ -4,7 +4,7 @@
 #include "../include/radar/Target.hpp"
 
 using namespace std;
-
+/*
 void testPhase1() {
     cout << "=== PHASE 1 TEST: Distance, Direction, and Angle Conversions ===" << endl;
     
@@ -60,5 +60,41 @@ void testPhase1() {
 
 int main() {
     testPhase1();
+    //return 0;
+} */
+Vector2D calculateCircularMotion(int frame, double deltaTime) {
+    double radius = 200.0;
+    double angularSpeed = 0.5; // radians per second
+    double angle = frame * angularSpeed * deltaTime;
+    return Vector2D(radius * cos(angle), radius * sin(angle));
+}
+
+void testPhase2() {
+    cout << "=== PHASE 2 TEST: Real-time Kinematics ===" << endl;
+    
+    Radar radar(Vector2D(0, 0), 1000.0);
+    Target movingTarget(Vector2D(100, 0), 500, TargetType::UNKNOWN, "MOVING_T1");
+    
+    double currentTime = 0.0;
+    const double timeStep = 0.1; // 100ms updates
+    
+    for (int frame = 0; frame < 15; frame++) {
+        Vector2D newPos = calculateCircularMotion(frame, timeStep);
+        movingTarget.updatePosition(newPos, currentTime);
+        
+        // Display real-time kinematics
+        cout << fixed << setprecision(2);
+        cout << "Frame " << setw(2) << frame << " | ";
+        cout << "Pos: (" << setw(6) << newPos.x << ", " << setw(6) << newPos.y << ") | ";
+        cout << "Speed: " << setw(6) << movingTarget.getSpeed() << " m/s | ";
+        cout << "Accel: " << setw(6) << movingTarget.getAcceleration().magnitude() << " m/s²";
+        cout << endl;
+        
+        currentTime += timeStep;
+    }
+}
+
+int main() {
+    testPhase2(); 
     return 0;
 }

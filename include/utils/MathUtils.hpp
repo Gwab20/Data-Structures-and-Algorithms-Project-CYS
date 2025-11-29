@@ -23,6 +23,22 @@ struct Vector2D{
         double dy = y- other.y;//difference in y coordinate
         return sqrt((dx*dx) + (dy*dy));
     }
+
+//phase 2
+// Inside Vector2D struct:
+Vector2D operator-(const Vector2D& other) const {
+    return Vector2D(x - other.x, y - other.y);
+}
+
+Vector2D operator/(double scalar) const {
+    if (scalar != 0) return Vector2D(x / scalar, y / scalar);
+    return Vector2D(0, 0);
+}
+
+double magnitude() const {
+    return sqrt(x*x + y*y);
+}
+
 };
 
 //class for common math operations
@@ -58,7 +74,14 @@ class MathUtils{
         }
         return angleDeg;
     }
+    
     //Convert bearing angle to compass direction (N, NE, E, SE, S, SW, W, NW)
     static string bearingToCompassDirection(double bearing);
+
+    //phase 2
+    static double calculateSpeed(const Vector2D& velocity) {
+    return velocity.magnitude();
+}
+    
 };
 #endif
