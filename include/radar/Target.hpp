@@ -4,6 +4,8 @@
 #include "../utils/MathUtils.hpp"
 #include <string>
 #include <iostream>
+using namespace std;
+
 
 
 struct DetectionEvent {
@@ -21,9 +23,9 @@ struct QueueNode{
 
 //circular linked list for sweep node
 struct SweepNode{
-    double angel; //stores angular position
+    double angle; //stores angular position
     SweepNode* next;//points to the next angle/position
-    SweepNode(double a): angel(a), next(nullptr){} //constructor to initilize values
+    SweepNode(double a): angle(a), next(nullptr){} //constructor to initilize values
 };
 
 enum class TargetType {
@@ -60,6 +62,13 @@ public:
     void setPosition(const Vector2D& newPos) { position = newPos; }
     void setHeight(double newHeight) { height = newHeight; }
     void setType(TargetType newType) { type = newType; }
+
+
+    bool operator==(const Target& other) const {
+        return id == other.id;
+    }
+
+    std::string getId() const { return id; }
     
     // Calculate horizontal distance from origin
     double calculateHorizontalDistance(const Vector2D& origin) const;

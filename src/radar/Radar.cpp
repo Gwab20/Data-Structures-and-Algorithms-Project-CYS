@@ -1,5 +1,6 @@
 #include "../../include/radar/Radar.hpp"
 #include <iostream>
+using namespace std;
 
 Radar::Radar(const Vector2D& pos, double range) 
     : position(pos), range(range), defenseGun(pos) {}
@@ -44,9 +45,9 @@ Radar::~Radar() {
     }
 }
 
-// === QUEUE Implementation ===
-void Radar::enqueueEvent(const DetectionEvent & event) {
-    if(isQueueFull()) {
+// === QUEUE IMPLEMENTATION ===
+void Radar::enqueueEvent(const DetectionEvent& event) {
+    if (isQueueFull()) {
         // Remove oldest event if queue is full (FIFO behavior)
         dequeueEvent();
     }
@@ -79,29 +80,25 @@ DetectionEvent Radar::dequeueEvent() {
     return event;
 }
 
-bool Radar::isQueueEmpty() const{
-    return queueFront ==nullptr;
+bool Radar::isQueueEmpty() const {
+    return queueFront == nullptr;
 }
 
 bool Radar::isQueueFull() const {
-    return queueSize>=MAX_QUEUE_SIZE;
+    return queueSize >= MAX_QUEUE_SIZE;
 }
 
 void Radar::clearQueue() {
-    while(!isQueueEmpty()) {
+    while (!isQueueEmpty()) {
         dequeueEvent();
     }
 }
 
-// ===CIRCULAR LINKED LIST FOR SWEEP ===
+// === CIRCULAR LINKED LIST FOR SWEEP ===
 void Radar::initializeSweep() {
-    // Create circular linked list with 16 directions (0°, 22.5°, 45°, ..., 337.5°)
-    const int numDirections = 16;
-    double angles[numDirections];
-    
-    for (int i = 0; i < numDirections; i++) {
-        angles[i] = i * 22.5;  // 0, 22.5, 45, 67.5, ..., 337.5
-    }
+    // Create circular linked list with 8 directions (0°, 45°, 90°, ..., 315°)
+    const int numDirections = 8;
+    double angles[] = {0, 45, 90, 135, 180, 225, 270, 315};
     
     SweepNode* prev = nullptr;
     for (int i = 0; i < numDirections; i++) {
@@ -123,8 +120,8 @@ void Radar::initializeSweep() {
 }
 
 void Radar::advanceSweep() {
-    if(currentSweep) {
-        currentSweep = currentSweep-> next;
+    if (currentSweep) {
+        currentSweep = currentSweep->next;
         sweepAngle = currentSweep->angle;
     }
 }
@@ -166,7 +163,7 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
                 if (detectedTargets[j] == allTargets[i]) {
                     alreadyDetected = true;
                     break;
-                }
+}
             }
             
             // If new detection, add to detected targets and create ENTER event
@@ -181,12 +178,13 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
             }
         }
     }
+}
 
-    void Radar::printDetectionEvents() {
-    cout << "Sweep Angle: " << getCurrentSweepAngle() << "° | ";
+void Radar::printDetectionEvents() {
+    std::cout << "Sweep Angle: " << getCurrentSweepAngle() << "° | ";
     
     if (isQueueEmpty()) {
-        cout << "No detection events" << endl;
+        std::cout << "No detection events" << std::endl;
         return;
     }
     
@@ -195,16 +193,15 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
     QueueNode* current = queueFront;
     while (current != nullptr && eventsPrinted < 5) { // Limit to 5 events per print
         if (current->data.isEntry) {
-            cout << "ENTER: " << current->data.targetId << " ";
+            std::cout << "ENTER: " << current->data.targetId << " ";
         } else {
-            cout << "EXIT: " << current->data.targetId << " ";
+            std::cout << "EXIT: " << current->data.targetId << " ";
         }
         current = current->next;
         eventsPrinted++;
     }
-    cout << endl;
+    std::cout << std::endl;
     
     // Clear events after printing (or keep them based on your needs)
     // clearQueue(); // Uncomment if you want to clear after printing
-}
 }
