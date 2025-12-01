@@ -2,9 +2,16 @@
 #include <iostream>
 using namespace std;
 
+// === SINGLE CONSTRUCTOR - KEEP ONLY THIS ONE ===
 Radar::Radar(const Vector2D& pos, double range) 
-    : position(pos), range(range), defenseGun(pos) {}
+    : position(pos), range(range), defenseGun(pos), 
+      queueFront(nullptr), queueRear(nullptr), queueSize(0),
+      sweepHead(nullptr), currentSweep(nullptr), sweepAngle(0),
+      currentDetectedCount(0) {
+    initializeSweep();
+}
 
+// === KEEP EXISTING METHODS ===
 bool Radar::isInRange(const Target& target) const {
     return target.calculateHorizontalDistance(position) <= range;
 }
@@ -20,14 +27,7 @@ void Radar::analyzeTarget(const Target& target,
     direction = target.getCompassDirectionFrom(position);
 }
 
-// Constructor - initialize linked lists
-Radar::Radar(const Vector2D& pos, double range) 
-    : position(pos), range(range), defenseGun(pos), 
-      queueFront(nullptr), queueRear(nullptr), queueSize(0),
-      sweepHead(nullptr), currentSweep(nullptr), sweepAngle(0),
-      currentDetectedCount(0) {
-    initializeSweep();
-}
+// === ADD THE NEW METHODS BELOW ===
 
 // Destructor - clean up linked lists
 Radar::~Radar() {
@@ -142,7 +142,7 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
             DetectionEvent exitEvent;
             exitEvent.targetId = detectedTargets[i].getId();
             exitEvent.isEntry = false;
-            exitEvent.timestamp = 0.0; // You can add real timestamp if needed
+            exitEvent.timestamp = 0.0;
             enqueueEvent(exitEvent);
             
             // Remove from detected array
@@ -163,7 +163,7 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
                 if (detectedTargets[j] == allTargets[i]) {
                     alreadyDetected = true;
                     break;
-}
+                }
             }
             
             // If new detection, add to detected targets and create ENTER event
@@ -173,7 +173,7 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
                 DetectionEvent enterEvent;
                 enterEvent.targetId = allTargets[i].getId();
                 enterEvent.isEntry = true;
-                enterEvent.timestamp = 0.0; // You can add real timestamp if needed
+                enterEvent.timestamp = 0.0;
                 enqueueEvent(enterEvent);
             }
         }
@@ -191,7 +191,7 @@ void Radar::printDetectionEvents() {
     // Print all events in queue (FIFO order)
     int eventsPrinted = 0;
     QueueNode* current = queueFront;
-    while (current != nullptr && eventsPrinted < 5) { // Limit to 5 events per print
+    while (current != nullptr && eventsPrinted < 5) {
         if (current->data.isEntry) {
             std::cout << "ENTER: " << current->data.targetId << " ";
         } else {
@@ -201,7 +201,4 @@ void Radar::printDetectionEvents() {
         eventsPrinted++;
     }
     std::cout << std::endl;
-    
-    // Clear events after printing (or keep them based on your needs)
-    // clearQueue(); // Uncomment if you want to clear after printing
 }

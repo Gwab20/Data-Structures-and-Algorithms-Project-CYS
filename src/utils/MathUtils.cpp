@@ -1,6 +1,5 @@
 #include "../../include/utils/MathUtils.hpp"
 
-
 string MathUtils::bearingToCompassDirection(double bearing) {
     // Normalize bearing to 0-360
     bearing = fmod(bearing, 360.0);
@@ -13,4 +12,9 @@ string MathUtils::bearingToCompassDirection(double bearing) {
     int index = static_cast<int>((bearing + 22.5) / 45.0) % 8;
     
     return directions[index];
+}
+
+// ADD THIS FUNCTION DEFINITION FOR PHASE 2
+double MathUtils::calculateSpeed(const Vector2D& velocity) {
+    return velocity.magnitude();
 }

@@ -12,7 +12,7 @@
 #include <string>
 using namespace std;
 
-//2d Vector for representing coordinated
+//2d Vector for representing coordinates
 struct Vector2D{
     double x; //x-coordinate
     double y;//y-coordinate
@@ -20,35 +20,33 @@ struct Vector2D{
 
     double distanceTo(const Vector2D& other) const {
         double dx = x - other.x;//difference in x coordinates
-        double dy = y- other.y;//difference in y coordinate
+        double dy = y - other.y;//difference in y coordinate
         return sqrt((dx*dx) + (dy*dy));
     }
 
-//phase 2
-// Inside Vector2D struct:
-Vector2D operator-(const Vector2D& other) const {
-    return Vector2D(x - other.x, y - other.y);
-}
+    //phase 2
+    Vector2D operator-(const Vector2D& other) const {
+        return Vector2D(x - other.x, y - other.y);
+    }
 
-Vector2D operator/(double scalar) const {
-    if (scalar != 0) return Vector2D(x / scalar, y / scalar);
-    return Vector2D(0, 0);
-}
+    Vector2D operator/(double scalar) const {
+        if (scalar != 0) return Vector2D(x / scalar, y / scalar);
+        return Vector2D(0, 0);
+    }
 
-double magnitude() const {
-    return sqrt(x*x + y*y);
-}
-
+    double magnitude() const {
+        return sqrt(x*x + y*y);
+    }
 };
 
 //class for common math operations
 class MathUtils{
     public:
-    //covert angel from degrees to radian 
+    //convert angle from degrees to radian 
     static double degreesToRadian(double degrees){
         return degrees * (M_PI/180.0);//M_PI is the constant PI
     }
-    //convert angel from rad to deg
+    //convert angle from rad to deg
     static double radiansToDegrees(double radians) {
         return radians * (180.0 / M_PI);
     }
@@ -78,10 +76,8 @@ class MathUtils{
     //Convert bearing angle to compass direction (N, NE, E, SE, S, SW, W, NW)
     static string bearingToCompassDirection(double bearing);
 
-    //phase 2
-    static double calculateSpeed(const Vector2D& velocity) {
-    return velocity.magnitude();
-}
+    //phase 2 - ADD THIS FUNCTION DECLARATION
+    static double calculateSpeed(const Vector2D& velocity);
     
 };
 #endif

@@ -40,13 +40,15 @@ private:
     TargetType type;
     std::string id;
 
-    //phase 2
+    // Phase 2 - Kinematics
     static const int HISTORY_SIZE = 10;
     Vector2D positionHistory[HISTORY_SIZE];
     int historyIndex;
     Vector2D velocity;
     Vector2D acceleration;
+    Vector2D prevVelocity;  // Changed from static to member variable
     double lastUpdateTime;
+    bool hasPreviousData;
 
 public:
     Target(const Vector2D& pos = Vector2D(), double h = 0.0, 
@@ -68,7 +70,7 @@ public:
         return id == other.id;
     }
 
-    std::string getId() const { return id; }
+    
     
     // Calculate horizontal distance from origin
     double calculateHorizontalDistance(const Vector2D& origin) const;

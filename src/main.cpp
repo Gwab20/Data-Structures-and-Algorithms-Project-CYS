@@ -1,100 +1,106 @@
+// Replace main.cpp with this enhanced version
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 #include "../include/radar/Radar.hpp"
 #include "../include/radar/Target.hpp"
 
 using namespace std;
-/*
-void testPhase1() {
-    cout << "=== PHASE 1 TEST: Distance, Direction, and Angle Conversions ===" << endl;
+
+void testPhase2Kinematics() {
+    cout << "=== PHASE 2: TARGET KINEMATICS TEST ===" << endl;
     
-    // Create radar at origin (0,0) with 1000m range
-    Radar radar(Vector2D(0, 0), 1000.0);
+    // Create a target
+    Target target(Vector2D(0, 0), 100.0, TargetType::UNKNOWN, "T1");
     
-    // Test targets at different positions
-    Target targets[] = {
-        Target(Vector2D(100, 100), 500, TargetType::UNKNOWN, "T1"),  // NE quadrant
-        Target(Vector2D(-150, 200), 300, TargetType::FRIENDLY, "T2"), // NW quadrant  
-        Target(Vector2D(300, -50), 400, TargetType::UNKNOWN, "T3"),  // SE quadrant
-        Target(Vector2D(-100, -200), 600, TargetType::UNKNOWN, "T4") // SW quadrant
-    };
+    // Simulate movement over time
+    double currentTime = 0.0;
+    const double timeStep = 0.1; // 100ms between updates
     
     cout << fixed << setprecision(2);
     
-    for (const auto& target : targets) {
-        double horizontalDist, displacement, bearing;
-        string direction;
+    for (int i = 0; i < 10; i++) {
+        currentTime += timeStep;
         
-        // Analyze target
-        radar.analyzeTarget(target, horizontalDist, displacement, bearing, direction);
+        // Move target in a pattern (simulating mouse movement)
+        double x = i * 10.0;  // 10 units per step in x
+        double y = i * 5.0;   // 5 units per step in y 
         
-        // Calculate firing solution
-        FiringSolution solution = radar.getDefenseGun().calculateFiringSolution(target);
+        Vector2D newPos(x, y);
+        target.updatePosition(newPos, currentTime);
         
-        cout << "\n--- Target " << target.getId() << " ---" << endl;
-        cout << "Position: (" << target.getPosition().x << ", " << target.getPosition().y << ")" << endl;
-        cout << "Height: " << target.getHeight() << "m" << endl;
-        cout << "Horizontal Distance: " << horizontalDist << "m" << endl;
-        cout << "Displacement: " << displacement << "m" << endl;
-        cout << "Bearing: " << bearing << "°" << endl;
-        cout << "Direction: " << direction << endl;
-        cout << "In Radar Range: " << (radar.isInRange(target) ? "YES" : "NO") << endl;
-        cout << "Firing Solution: " << solution.elevation << "° " << solution.direction << endl;
+        // Display kinematics data
+        cout << "Time: " << currentTime << "s | ";
+        cout << "Position: (" << x << ", " << y << ") | ";
+        cout << "Speed: " << target.getSpeed() << " units/s | ";
+        cout << "Velocity: (" << target.getVelocity().x << ", " 
+                  << target.getVelocity().y << ") | ";
+        cout << "Acceleration: (" << target.getAcceleration().x << ", " 
+                  << target.getAcceleration().y << ")" << endl;
     }
     
-    // Test edge cases
-    cout << "\n--- Edge Case Tests ---" << endl;
+    // Test with Radar integration
+    cout << "\n=== RADAR INTEGRATION TEST ===" << endl;
+    Radar radar(Vector2D(0, 0), 1000.0);
     
-    // Target directly north
-    Target northTarget(Vector2D(0, 500), 300);
-    auto northSolution = radar.getDefenseGun().calculateFiringSolution(northTarget);
-    cout << "North Target - Direction: " << northSolution.direction 
-              << ", Elevation: " << northSolution.elevation << "°" << endl;
+    double horizontalDist, displacement, bearing;
+    string direction;
     
-    // Target directly east  
-    Target eastTarget(Vector2D(500, 0), 300);
-    auto eastSolution = radar.getDefenseGun().calculateFiringSolution(eastTarget);
-    cout << "East Target - Direction: " << eastSolution.direction 
-              << ", Elevation: " << eastSolution.elevation << "°" << endl;
+    radar.analyzeTarget(target, horizontalDist, displacement, bearing, direction);
+    
+    cout << "Target Analysis:" << endl;
+    cout << "Horizontal Distance: " << horizontalDist << endl;
+    cout << "Displacement: " << displacement << endl;
+    cout << "Bearing: " << bearing << "°" << endl;
+    cout << "Direction: " << direction << endl;
+    cout << "Current Speed: " << target.getSpeed() << " units/s" << endl;
 }
 
-int main() {
-    testPhase1();
-    //return 0;
-} */
-Vector2D calculateCircularMotion(int frame, double deltaTime) {
-    double radius = 200.0;
-    double angularSpeed = 0.5; // radians per second
-    double angle = frame * angularSpeed * deltaTime;
-    return Vector2D(radius * cos(angle), radius * sin(angle));
-}
-
-void testPhase2() {
-    cout << "=== PHASE 2 TEST: Real-time Kinematics ===" << endl;
+void testPhase3WithProperStructures() {
+    cout << "\n\n=== PHASE 3 WITH QUEUE & CIRCULAR LINKED LIST ===" << endl;
     
     Radar radar(Vector2D(0, 0), 1000.0);
-    Target movingTarget(Vector2D(100, 0), 500, TargetType::UNKNOWN, "MOVING_T1");
     
-    double currentTime = 0.0;
-    const double timeStep = 0.1; // 100ms updates
+    // Create test targets
+    const int TOTAL_TARGETS = 4;
+    Target testTargets[TOTAL_TARGETS];
     
-    for (int frame = 0; frame < 15; frame++) {
-        Vector2D newPos = calculateCircularMotion(frame, timeStep);
-        movingTarget.updatePosition(newPos, currentTime);
+    testTargets[0] = Target(Vector2D(100, 100), 500, TargetType::UNKNOWN, "T1");
+    testTargets[1] = Target(Vector2D(1500, 1500), 500, TargetType::UNKNOWN, "T2");
+    testTargets[2] = Target(Vector2D(200, 200), 400, TargetType::FRIENDLY, "F1");
+    testTargets[3] = Target(Vector2D(1200, 1200), 600, TargetType::UNKNOWN, "T3");
+    
+    cout << "Simulating radar sweeps with queue and circular list:" << endl;
+    
+    // Simulate multiple sweeps
+    for (int sweep = 0; sweep < 8; sweep++) {
+        cout << "\nSweep " << sweep << ": ";
         
-        // Display real-time kinematics
-        cout << fixed << setprecision(2);
-        cout << "Frame " << setw(2) << frame << " | ";
-        cout << "Pos: (" << setw(6) << newPos.x << ", " << setw(6) << newPos.y << ") | ";
-        cout << "Speed: " << setw(6) << movingTarget.getSpeed() << " m/s | ";
-        cout << "Accel: " << setw(6) << movingTarget.getAcceleration().magnitude() << " m/s²";
-        cout << endl;
+        // Move targets to simulate dynamic scenario
+        if (sweep == 2) {
+            testTargets[1].setPosition(Vector2D(500, 500)); // T2 enters range
+        }
+        if (sweep == 4) {
+            testTargets[0].setPosition(Vector2D(1500, 1500)); // T1 leaves range
+        }
+        if (sweep == 6) {
+            testTargets[3].setPosition(Vector2D(300, 300)); // T3 enters range
+        }
         
-        currentTime += timeStep;
+        radar.updateDetections(testTargets, TOTAL_TARGETS);
+        radar.printDetectionEvents();
     }
+    
+    cout << "\n=== Queue Behavior Test ===" << endl;
+    cout << "Final sweep demonstrates FIFO queue behavior" << endl;
 }
 
 int main() {
-    testPhase2(); 
+    // Run Phase 2 test first
+    testPhase2Kinematics();
+    
+    // Then run Phase 3 test
+    testPhase3WithProperStructures();
+    
     return 0;
 }
