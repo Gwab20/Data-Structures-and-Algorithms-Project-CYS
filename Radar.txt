@@ -1,0 +1,146 @@
+Data Structures and Algorithms Project: Anti-aircraft autocannon Radar software based simulation
+
+Task
+1)Radar Section:
+i)The radar's range(radius) in terms of both height and horizontal distance.
+ii)The Radar interface that shows it's implimentation(as of right now limited to terminal but may add GUI.
+iii)All 4 directions North, South, East and West.
+
+2)Functionality:
+i)We will move the mouse arrow which will act as an unknown object, when we move it into the onscree display of the radar
+it will use data sctuructures/algorithms to detect the unknown object(which is the mouse key we move) and give us the Horizontal distance
+height(height will always be kept constant) and displacement from us and show us the output and also detect the speed and acceleration
+of the flying object.
+
+ii)After Detection of the object since this is an air defence Radar it will also tell our air defence gun on the ground where
+to set its trajectory so that it can hit the flying object. The Radar will calculate what angle from the ground the air defence
+gun will face and in what direcrection to land an exact hit(for example 30 degrees north east)
+
+iii)Friendly flying objects will also be in the radar range whose data will prolly be available and the radar will differentiate
+between the unknown danger and the friendly object using data structures and algorithms.
+
+3)Things to keep in mind:
+i)Regarding the unknown flying object(mouse arrow)it speed and acceleration output will change depending on how fast we move it and it should
+update in real time as we move the mouse around the designated detectation radius.
+
+ii)It's distances and displacement from the airdefece gun must also change in real time as the object may be constantly in mothing and the 
+direction the gun should point in should too as well.
+
+iii)Setting the radius as how much space on are screen equated to how many meters of distance.
+
+
+4)This that need to be displayed on the output screen:
+i)Speed and Acceleration of flying object.(must keep updating in real time)
+ii)Distance, height and Displacement of the flying object from the gun.(also updated in real time)
+iii)Angle from the the ground and directin of the air defence gun so that it may shoot the flying object.
+iv)The Radar interface(for now on terminal)
+
+AntiAircraftRadar/          # git repo root
+│
+├── src/                     # every .cpp
+│   ├── main.cpp            # game loop, glue code only
+│   ├── radar/              # pure logic, zero printing
+│   │   ├── Radar.cpp
+│   │   ├── Target.cpp      # kinematics
+│   │   └── Gun.cpp         # fire-control maths
+│   ├── ui/                 # terminal I/O only
+│   │   ├── ConsoleUI.cpp   # ASCII scope + HUD
+│   │   └── MouseInput.cpp  # OS mouse polling
+│   └── utils/              # header-only helpers
+│       └── MathUtils.cpp   # (if you really need a .cpp)
+│
+├── include/                 # public headers mirror src/
+│   ├── radar/
+│   │   ├── Radar.hpp
+│   │   ├── Target.hpp
+│   │   └── Gun.hpp
+│   ├── ui/
+│   │   ├── ConsoleUI.hpp
+│   │   └── MouseInput.hpp
+│   └── utils/
+│       └── MathUtils.hpp
+│
+├── gui/                     # ***EMPTY FOR NOW*** (Dear ImGui later)
+│   ├── GuiMain.cpp
+│   ├── RadarWidget.cpp
+│   └── HudPanel.cpp
+│
+├── tests/                   # unit tests (GoogleTest or Catch2)
+│   ├── test_main.cpp
+│   ├── test_target.cpp
+│   └── test_gun.cpp
+│
+├── build/                   # .gitignore-ed artefacts
+├── scripts/
+│   ├── build.sh            # one-key g++ (Linux/WSL)
+│   ├── build.bat           # one-key g++ (Windows)
+│   └── build_gui.sh        # same but +ImGui sources
+├── docs/
+│   ├── kinematics.md       # equations you use
+│   └── gui_notes.md        # ImGui integration checklist
+├── .gitignore
+└── README.md               # clone → build → run instructions
+
+- Fundamentals of data structures
+- An overview of computer programming
+- Data types, abstract data types
+- Review of pointers: defining pointer variables, pointer arithmetic, memory diagrams
+- Review of pointers continued: pointers and arrays, pointer indirections, structures and pointers
+- Passing pointer arguments to a function and returning pointers from a function
+- Computational complexity of algorithms and their time-space analysis
+- Running time calculations
+- Asymptotic notations for algorithmic complexity analysis
+- Lists: simple arrays, linked lists
+- Linear search vs binary search
+- Lists continued: double linked lists, circular linked lists
+- Stacks & Queues: sequential/array implementation of stacks and queues, linked list implementation of stacks and queues
+- Arithmetic expressions, polish notation
+- Recursion: recursive implementation of stacks and queues
+- Sorting: bubble sort, insertion sort, selection sort
+- Sorting continued: merge sort, quick sort, counting sort & radix sort, heap sort (tentative)
+- Trees: data structure definition and generic implementation
+- Tree traversals and its application
+- Binary tree, binary search tree, expression trees
+- Trees continued: AVL trees, Huffman coding (tentative), B-Tree (tentative)
+- Graphs: adjacency matrix implementation, linked list implementation
+- Graphs continued: depth-first traversal of graphs, breadth-first traversal of graphs, shortest distance algorithms
+- Hashing and searching: hashing techniques, implementation of hashing techniques
+-Priority Queues: binary heap, applications
+
+
+Phase1:
+✅ Milestone: You can calculate distance, direction, and convert angles with confidence.
+Phase2:
+✅ Milestone: One object correctly updates and reports its kinematics.
+Phase3:
+✅ Milestone: Console logs show detections entering/leaving range.
+Phase4:
+✅ Milestone: Gun module outputs “30° NE” style results for any target.
+Phase5:
+✅ Milestone: Text-only real-time output in terminal.
+Phase6:
+✅ Milestone: Live ASCII radar updating every frame.
+Phase7:
+✅ Milestone: Moving your mouse updates target position in radar display.
+Phase8:
+✅ Milestone: Radar shows friendlies & unknowns differently.
+Phase 9:
+✅ Milestone: Easy migration path to GUI without touching core code.
+Phase10:
+✅ Milestone: ./build/tests all green ✅
+Phase11:
+✅ Milestone: Someone can clone → ./scripts/build.sh → run simulation immediately.
+
+| **Phase**    | **Milestone Summary**                                     | **Key Data Structures**                                                                                                          | **Core Algorithms / Concepts**                                                                                                    | **Purpose in This Phase**                                                                         |
+| ------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Phase 1**  | Distance, direction, and angle conversions work correctly | • Basic **structs/classes** for `Vector2D`, `Target`  <br>• Use of **arrays** for coordinate components                          | • Euclidean distance formula  <br>• Trigonometric angle conversion (atan2)  <br>• Pointer arithmetic for coordinates              | Establish math foundation — compute relative position and angles using primitive structures.      |
+| **Phase 2**  | One object correctly updates & reports its kinematics     | • `Target` object stores previous states in an **array** or **linked list**  <br>• Use of **pointers** for dynamic state updates | • Finite difference method (Δx/Δt, Δv/Δt) for speed & acceleration  <br>• Recursion for time-step updates                         | Implement kinematic calculations and understand real-time state changes.                          |
+| **Phase 3**  | Console logs show detections entering/leaving range       | • **Queue** (linked list or array) for detection events  <br>• **Circular linked list** for continuous sweep rotation            | • Linear search to check if object within radius  <br>• Enqueue/dequeue for detection processing                                  | Radar begins detecting dynamic targets; manage detection pipeline efficiently.                    |
+| **Phase 4**  | Gun outputs firing solution like “30° NE”                 | • `Gun` class as ADT  <br>• **Tree (expression tree)** to evaluate firing equations                                              | • Trigonometric functions for elevation & azimuth  <br>• Expression tree evaluation (recursive)                                   | Model fire-control computation mathematically, separating logic from data.                        |
+| **Phase 5**  | Text-only real-time terminal output                       | • **2D array (grid)** for ASCII radar  <br>• **Queue** for screen refresh operations                                             | • Recursive/iterative redraw loop  <br>• Coordinate-to-grid mapping algorithm                                                     | Render real-time radar visuals; manage screen updates efficiently.                                |
+| **Phase 6**  | Live ASCII radar updating every frame                     | • **Circular linked list** for sweep rotation (0–360°)  <br>• **Stack** for undoing last frame if needed                         | • Timer-based recursive calls  <br>• Double-buffering logic with stack push/pop                                                   | Achieve continuous radar sweep effect.                                                            |
+| **Phase 7**  | Mouse controls target motion                              | • `Target` position stored in **array/vector**  <br>• Use of **pointers** for direct updates                                     | • Event-driven update algorithm (Δx, Δy per frame)  <br>• Kinematic equations for trajectory                                      | Real-time input translates into physical movement inside radar grid.                              |
+| **Phase 8**  | Radar distinguishes friendlies vs unknowns                | • **Hash Table** (`unordered_map<string, Target>`) for friendlies  <br>• **Array/List** for unknowns                             | • Hash lookup for O(1) friend/foe check  <br>• Sorting by distance (Quick Sort / Merge Sort)  <br>• Binary search in sorted array | Implement Identification Friend or Foe (IFF) system; efficient classification and prioritization. |
+| **Phase 9**  | GUI-ready modular core                                    | • Maintain logic in **abstract ADTs** (`Radar`, `Gun`, `Target`)  <br>• No data coupling to UI                                   | • Observer pattern for update notifications  <br>• Encapsulation and modular design                                               | Clean separation between core logic and presentation layer — GUI-ready architecture.              |
+| **Phase 10** | All tests green ✅                                        | • Temporary **arrays/lists** of test inputs  <br>• Mock data structures                                                          | • Unit testing algorithms (sorting, queue ops, search)  <br>• Complexity checks using runtime measurement                         | Validate correctness and performance of algorithms individually.                                  |
+| **Phase 11** | One-command build & run works                             | • — (build scripts only)                                                                                                         | • Automation (bash/batch scripts)                                                                                                 | Ensure reproducibility; project compiles and executes immediately.                                |
