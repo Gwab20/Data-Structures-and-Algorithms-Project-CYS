@@ -14,7 +14,31 @@ string MathUtils::bearingToCompassDirection(double bearing) {
     return directions[index];
 }
 
-// ADD THIS FUNCTION DEFINITION FOR PHASE 2
+
 double MathUtils::calculateSpeed(const Vector2D& velocity) {
     return velocity.magnitude();
+}
+// === PHASE 4: Expression Tree Factory Methods ===
+ExpressionTree ExpressionTree::createElevationExpression() {
+    // elevation = atan(height / distance) * (180 / π)
+    ExpressionNode* heightNode = new VariableNode("height");
+    ExpressionNode* distanceNode = new VariableNode("distance");
+    ExpressionNode* divisionNode = new OperatorNode('/', heightNode, distanceNode);
+    ExpressionNode* atanNode = new FunctionNode("atan", divisionNode);
+    ExpressionNode* constantNode = new ConstantNode(180.0 / M_PI);
+    ExpressionNode* root = new OperatorNode('*', atanNode, constantNode);
+    
+    return ExpressionTree(root);
+}
+
+ExpressionTree ExpressionTree::createAzimuthExpression() {
+    // azimuth = atan(dy/dx) * (180 / π), normalized later
+    ExpressionNode* dyNode = new VariableNode("dy");
+    ExpressionNode* dxNode = new VariableNode("dx");
+    ExpressionNode* divisionNode = new OperatorNode('/', dyNode, dxNode);
+    ExpressionNode* atanNode = new FunctionNode("atan", divisionNode);
+    ExpressionNode* constantNode = new ConstantNode(180.0 / M_PI);
+    ExpressionNode* root = new OperatorNode('*', atanNode, constantNode);
+    
+    return ExpressionTree(root);
 }

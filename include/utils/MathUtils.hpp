@@ -3,6 +3,8 @@
 
 #include <cmath>
 #include <string>
+#include <vector>
+#include <map>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -80,4 +82,171 @@ class MathUtils{
     static double calculateSpeed(const Vector2D& velocity);
     
 };
+
+// === PHASE 4: Expression Tree Nodes (Manual Memory Management) ===
+enum class NodeType {
+    CONSTANT,
+    VARIABLE,
+    OPERATOR,
+    FUNCTION
+};
+
+class ExpressionNode {
+public:
+    virtual ~ExpressionNode() {}
+    virtual double evaluate(const map<string, double>& variables) const = 0;
+    virtual NodeType getType() const = 0;
+    virtual ExpressionNode* clone() const = 0; // For copying nodes
+};
+
+class ConstantNode : public ExpressionNode {
+private:
+    double value;
+public:
+    ConstantNode(double val) : value(val) {}
+    double evaluate(const std::map<std::string, double>& variables) const override {
+        return value;
+    }
+    NodeType getType() const override { return NodeType::CONSTANT; }
+    ExpressionNode* clone() const override {
+        return new ConstantNode(value);
+    }
+};
+
+class VariableNode : public ExpressionNode {
+private:
+    std::string name;
+public:
+    VariableNode(const std::string& varName) : name(varName) {}
+    double evaluate(const std::map<std::string, double>& variables) const override {
+        auto it = variables.find(name);
+        if (it != variables.end()) return it->second;
+        return 0.0;
+    }
+    NodeType getType() const override { return NodeType::VARIABLE; }
+    ExpressionNode* clone() const override {
+        return new VariableNode(name);
+    }
+};
+
+class OperatorNode : public ExpressionNode {
+private:
+    char op;
+    ExpressionNode* left;
+    ExpressionNode* right;
+    
+public:
+    OperatorNode(char operation, ExpressionNode* l, ExpressionNode* r)
+        : op(operation), left(l), right(r) {}
+    
+    ~OperatorNode() {
+        delete left;
+        delete right;
+    }
+    
+    double evaluate(const std::map<std::string, double>& variables) const override {
+        double leftVal = left->evaluate(variables);
+        double rightVal = right->evaluate(variables);
+        
+        switch(op) {
+            case '+': return leftVal + rightVal;
+            case '-': return leftVal - rightVal;
+            case '*': return leftVal * rightVal;
+            case '/': return rightVal != 0 ? leftVal / rightVal : 0.0;
+            case '^': return pow(leftVal, rightVal);
+            default: return 0.0;
+        }
+    }
+    
+    NodeType getType() const override { return NodeType::OPERATOR; }
+    
+    ExpressionNode* clone() const override {
+        return new OperatorNode(op, left->clone(), right->clone());
+    }
+};
+
+class FunctionNode : public ExpressionNode {
+private:
+    std::string funcName;
+    ExpressionNode* argument;
+    
+public:
+    FunctionNode(const std::string& name, ExpressionNode* arg)
+        : funcName(name), argument(arg) {}
+    
+    ~FunctionNode() {
+        delete argument;
+    }
+    
+    double evaluate(const std::map<std::string, double>& variables) const override {
+        double argVal = argument->evaluate(variables);
+        
+        if (funcName == "sin") return sin(argVal);
+        if (funcName == "cos") return cos(argVal);
+        if (funcName == "tan") return tan(argVal);
+        if (funcName == "atan") return atan(argVal);
+        if (funcName == "sqrt") return sqrt(argVal);
+        if (funcName == "log") return log(argVal);
+        
+        return 0.0;
+    }
+    
+    NodeType getType() const override { return NodeType::FUNCTION; }
+    
+    ExpressionNode* clone() const override {
+        return new FunctionNode(funcName, argument->clone());
+    }
+};
+
+// Expression Tree class
+class ExpressionTree {
+private:
+    ExpressionNode* root;
+    
+    // Helper for deep copy
+    ExpressionNode* copyTree(ExpressionNode* node) {
+        if (node == nullptr) return nullptr;
+        return node->clone();
+    }
+    
+    // Helper for deleting tree
+    void deleteTree(ExpressionNode* node) {
+        if (node) {
+            delete node;
+        }
+    }
+    
+public:
+    // Constructor
+    ExpressionTree(ExpressionNode* rootNode = nullptr) : root(rootNode) {}
+    
+    // Copy constructor
+    ExpressionTree(const ExpressionTree& other) {
+        root = copyTree(other.root);
+    }
+    
+    // Assignment operator
+    ExpressionTree& operator=(const ExpressionTree& other) {
+        if (this != &other) {
+            deleteTree(root);
+            root = copyTree(other.root);
+        }
+        return *this;
+    }
+    
+    // Destructor
+    ~ExpressionTree() {
+        deleteTree(root);
+    }
+    
+    double evaluate(const std::map<std::string, double>& variables) const {
+        if (root) return root->evaluate(variables);
+        return 0.0;
+    }
+    
+    // Static factory methods to create expression trees
+    static ExpressionTree createElevationExpression();
+    static ExpressionTree createAzimuthExpression();
+};
+
 #endif
