@@ -33,45 +33,50 @@ class Radar {
     //the initial position of radar(0,0) and its range(1000)
     public:
     Radar(const Vector2D& pos = Vector2D(0, 0), double range = 1000.0);
-        ~Radar(); //destructor
+    ~Radar(); //destructor
+    
+    // Prevent copying since Gun is non-copyable
+    Radar(const Radar&) = delete;
+    Radar& operator=(const Radar&) = delete;
 
-        //Queue operations
-        void enqueueEvent(const DetectionEvent& event);
-        DetectionEvent dequeueEvent();
-        bool isQueueEmpty() const;
-        bool isQueueFull() const;
-        void clearQueue();
+    //Queue operations
+    void enqueueEvent(const DetectionEvent& event);
+    DetectionEvent dequeueEvent();
+    bool isQueueEmpty() const;
+    bool isQueueFull() const;
+    void clearQueue();
 
-        //sweep operations
-        void initializeSweep();
-        void advanceSweep();
-        double getCurrentSweepAngle() const;
+    //sweep operations
+    void initializeSweep();
+    void advanceSweep();
+    double getCurrentSweepAngle() const;
 
-        //detection system
-        void updateDetections(Target* allTargets, int targetCount);
-        void printDetectionEvents();
+    //detection system
+    void updateDetections(Target* allTargets, int targetCount);
+    void printDetectionEvents();
 
 
-         //PHASE 1/2 imp
+     //PHASE 1/2 imp
 
-        Vector2D getPosition() const { return position; }
-        double getRange() const { return range; }
+    Vector2D getPosition() const { return position; }
+    double getRange() const { return range; }
 
-        Gun getDefenseGun() const { return defenseGun; }
-        bool isInRange(const Target& target) const; //Uses distance calculation between radar position and target position. If distance <= radar range, the target is detectable.
-        
-        /*analysis function that calculates all essential targeting data:
-          Horizontal distance: Straight-line range to target
-          Displacement: Magnitude of position difference vector  
-          Bearing: Precise angle from radar to target
-          Direction: Human-readable compass direction
-     
-         These outputs are used for targeting, tracking, and engagement decisions.*/
-         void analyzeTarget(const Target& target, 
-                      double& horizontalDist, 
-                      double& displacement, 
-                      double& bearing, 
-                      string& direction) const;
+    // Return reference to avoid copying
+    const Gun& getDefenseGun() const { return defenseGun; }
+    bool isInRange(const Target& target) const; //Uses distance calculation between radar position and target position. If distance <= radar range, the target is detectable.
+    
+    /*analysis function that calculates all essential targeting data:
+      Horizontal distance: Straight-line range to target
+      Displacement: Magnitude of position difference vector  
+      Bearing: Precise angle from radar to target
+      Direction: Human-readable compass direction
+ 
+     These outputs are used for targeting, tracking, and engagement decisions.*/
+     void analyzeTarget(const Target& target, 
+                  double& horizontalDist, 
+                  double& displacement, 
+                  double& bearing, 
+                  string& direction) const;
 
 
 };
