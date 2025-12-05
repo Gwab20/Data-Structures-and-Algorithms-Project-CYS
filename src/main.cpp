@@ -1,9 +1,26 @@
 #include <iostream>
 #include <iomanip>
+#include <windows.h>
 #include "../include/radar/Target.hpp"
 #include "../include/radar/Gun.hpp"
 
 using namespace std;
+
+// Function to set up console for UTF-8
+void setupConsoleUTF8() {
+    // For Windows: Set console output to UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    
+    // Also try setting input encoding to UTF-8 (optional)
+    SetConsoleCP(CP_UTF8);
+    
+    // Enable virtual terminal processing for better Unicode support
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
 
 void testExpressionTreeManual() {
     cout << "=== TESTING EXPRESSION TREE (MANUAL MEMORY) ===" << endl;
@@ -107,6 +124,10 @@ void testComplexExpression() {
 }
 
 int main() {
+    
+    // Setup console encoding FIRST, before any output
+    setupConsoleUTF8();
+
     testExpressionTreeManual();
     testGunWithDynamicArrays();
     testComplexExpression();
