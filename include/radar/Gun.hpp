@@ -38,8 +38,8 @@ public:
     // Getters
     Vector2D getPosition() const { return position; }
     
-    // Calculate firing solution
-    FiringSolution calculateFiringSolution(const Target& target);
+    // Calculate firing solution - MADE CONST
+    FiringSolution calculateFiringSolution(const Target& target) const;
     
     // Store solution in history
     void storeSolution(const FiringSolution& solution);

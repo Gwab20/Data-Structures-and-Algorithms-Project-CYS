@@ -399,6 +399,7 @@ void ConsoleUI::renderTargetInfo(const Target& target, const Radar& radar) {
 }
 
 void ConsoleUI::renderFiringSolution(const Gun& gun, const Target& target) {
+    // Now this will work because calculateFiringSolution is const
     FiringSolution solution = gun.calculateFiringSolution(target);
     
     stringstream ss;

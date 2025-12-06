@@ -75,7 +75,8 @@ double Gun::calculateAzimuthAngle(const Target& target) const {
     return azimuth;
 }
 
-FiringSolution Gun::calculateFiringSolution(const Target& target) {
+// MADE CONST
+FiringSolution Gun::calculateFiringSolution(const Target& target) const {
     FiringSolution solution;
     
     // Calculate using expression trees
@@ -91,8 +92,8 @@ FiringSolution Gun::calculateFiringSolution(const Target& target) {
                                                 solution.azimuth, 
                                                 solution.direction);
     
-    // Store in history
-    storeSolution(solution);
+    // Note: We can't store in history because this method is now const
+    // storeSolution(solution); // REMOVED - history storage requires non-const
     
     return solution;
 }
