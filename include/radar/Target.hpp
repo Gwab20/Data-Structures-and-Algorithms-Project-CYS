@@ -28,27 +28,29 @@ struct SweepNode{
     SweepNode(double a): angle(a), next(nullptr){} //constructor to initilize values
 };
 
+// type of target: enemy or foe
 enum class TargetType {
     UNKNOWN,
     FRIENDLY
 };
 
+// represents a moving object that radar can detect
 class Target {
 private:
-    Vector2D position;
-    double height;
-    TargetType type;
-    std::string id;
+    Vector2D position; // current location (x,y)
+    double height; //altitude
+    TargetType type; //friend or unknown
+    std::string id; //ID
 
     // Phase 2 - Kinematics
-    static const int HISTORY_SIZE = 10;
-    Vector2D positionHistory[HISTORY_SIZE];
-    int historyIndex;
-    Vector2D velocity;
-    Vector2D acceleration;
+    static const int HISTORY_SIZE = 10; // last 10 positions
+    Vector2D positionHistory[HISTORY_SIZE]; // 
+    int historyIndex; // where to store next
+    Vector2D velocity; // current speed
+    Vector2D acceleration; // current acceleration
     Vector2D prevVelocity;  // Changed from static to member variable
-    double lastUpdateTime;
-    bool hasPreviousData;
+    double lastUpdateTime; // when last updated
+    bool hasPreviousData;  // does it have enough data to calculate
 
 public:
     Target(const Vector2D& pos = Vector2D(), double h = 0.0, 

@@ -21,6 +21,7 @@ Gun::~Gun() {
     delete[] solutionHistory;
 }
 
+// make data with math formulas: distance, height, postion differences
 map<string, double> Gun::createVariableMap(const Target& target) const {
     map<string, double> variables;
     
@@ -37,6 +38,7 @@ map<string, double> Gun::createVariableMap(const Target& target) const {
     return variables;
 }
 
+//calcualte up/down angle using math formulas
 double Gun::calculateElevationAngle(const Target& target) const {
     auto variables = createVariableMap(target);
     double elevation = elevationTree.evaluate(variables);
@@ -48,6 +50,7 @@ double Gun::calculateElevationAngle(const Target& target) const {
     return elevation;
 }
 
+//calculate left/right angle using math formula
 double Gun::calculateAzimuthAngle(const Target& target) const {
     auto variables = createVariableMap(target);
     double azimuth = azimuthTree.evaluate(variables);
@@ -104,6 +107,7 @@ void Gun::storeSolution(const FiringSolution& solution) {
     currentHistoryIndex = (currentHistoryIndex + 1) % historySize;
 }
 
+// get last N shots from history
 void Gun::getRecentSolutions(FiringSolution* output, int n) const {
     if (n > historySize) n = historySize;
     
@@ -111,12 +115,13 @@ void Gun::getRecentSolutions(FiringSolution* output, int n) const {
     int index = (currentHistoryIndex - 1 + historySize) % historySize;
     
     for (int i = 0; i < n; i++) {
-        output[i] = solutionHistory[index];
-        index = (index - 1 + historySize) % historySize;
+        output[i] = solutionHistory[index]; // copt to output
+        index = (index - 1 + historySize) % historySize; //move backward
         if (index < 0) index = historySize - 1;
     }
 }
 
+// Make shooting instructions look nice: "45.0° NE"
 string Gun::formatFiringSolution(double elevation, double azimuth, const string& direction) const {
     stringstream ss;
     ss << fixed << setprecision(1);

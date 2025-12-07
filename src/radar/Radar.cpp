@@ -16,6 +16,8 @@ Radar::Radar(const Vector2D& pos, double range)
     initializeSweep();
 }
 
+
+// Check if target is within radar's view
 bool Radar::isInRange(const Target& target) const {
     return target.calculateHorizontalDistance(position) <= range;
 }
@@ -33,7 +35,7 @@ void Radar::analyzeTarget(const Target& target,
 
 // Destructor - clean up linked lists
 Radar::~Radar() {
-    clearQueue();
+    clearQueue(); // empty event queue
     
     // Clean up circular list
     if (sweepHead) {
@@ -56,17 +58,18 @@ void Radar::enqueueEvent(const DetectionEvent & event) {
     
     QueueNode* newNode = new QueueNode(event);
     if (isQueueEmpty()) {
-        queueFront = queueRear = newNode;
+        queueFront = queueRear = newNode; // first item
     } else {
-        queueRear->next = newNode;
+        queueRear->next = newNode; // add to end
         queueRear = newNode;
     }
     queueSize++;
 }
 
+//get next event from queue
 DetectionEvent Radar::dequeueEvent() {
     if (isQueueEmpty()) {
-        return DetectionEvent{"", false, 0.0};
+        return DetectionEvent{"", false, 0.0}; // empty event
     }
     
     QueueNode* temp = queueFront;
@@ -74,7 +77,7 @@ DetectionEvent Radar::dequeueEvent() {
     queueFront = queueFront->next;
     
     if (queueFront == nullptr) {
-        queueRear = nullptr;
+        queueRear = nullptr; // queue not empty
     }
     
     delete temp;
@@ -82,6 +85,7 @@ DetectionEvent Radar::dequeueEvent() {
     return event;
 }
 
+//check queue status
 bool Radar::isQueueEmpty() const{
     return queueFront == nullptr;
 }
@@ -110,10 +114,10 @@ void Radar::initializeSweep() {
     for (int i = 0; i < numDirections; i++) {
         SweepNode* newNode = new SweepNode(angles[i]);
         if (sweepHead == nullptr) {
-            sweepHead = newNode;
+            sweepHead = newNode; // first node
             prev = sweepHead;
         } else {
-            prev->next = newNode;
+            prev->next = newNode; // link to previous
             prev = newNode;
         }
     }
@@ -121,7 +125,7 @@ void Radar::initializeSweep() {
     if (prev) {
         prev->next = sweepHead;
     }
-    currentSweep = sweepHead;
+    currentSweep = sweepHead; // start at first position
     if (currentSweep) {
         sweepAngle = currentSweep->angle;
     }
@@ -131,7 +135,7 @@ void Radar::advanceSweep() {
     if(currentSweep) {
         currentSweep = currentSweep->next;
         if (currentSweep) {
-            sweepAngle = currentSweep->angle;
+            sweepAngle = currentSweep->angle; // update current angle
         }
     }
 }

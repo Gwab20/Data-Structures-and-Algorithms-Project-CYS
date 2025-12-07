@@ -38,21 +38,23 @@ public:
     }
 };
 
+// Setup Windows console for colors and UTF8
 void setupConsoleUTF8() {
     #ifdef _WIN32
-        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleOutputCP(CP_UTF8); // Enable UTF8
         SetConsoleCP(CP_UTF8);
         
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD dwMode = 0;
         GetConsoleMode(hOut, &dwMode);
-        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING; // Enable colors
         SetConsoleMode(hOut, dwMode);
     #endif
 }
 
+// Show fancy controls screen
 void clearScreen() {
-    cout << "\033[2J\033[1;1H";
+    cout << "\033[2J\033[1;1H"; // ANSI clear + home
 }
 
 void displayControls() {
@@ -89,14 +91,16 @@ void displayControls() {
     cout << "Press ENTER to begin simulation... ";
 }
 
+// Create random flying targets
 vector<Target> generateRandomTargets(int count, double range, RandomGenerator& rng) {
     vector<Target> targets;
     
     for (int i = 0; i < count; i++) {
         double x = rng.getRandomDouble(-range * 1.2, range * 1.2);
         double y = rng.getRandomDouble(-range * 1.2, range * 1.2);
-        double height = rng.getRandomDouble(300.0, 2000.0);
+        double height = rng.getRandomDouble(300.0, 2000.0); // flying high
         
+        // 60% chance tp be enemy, 40% friendly
         TargetType type = rng.getRandomBool(0.6) ? TargetType::UNKNOWN : TargetType::FRIENDLY;
         
         string id = "TGT-" + to_string(1000 + i);
@@ -106,6 +110,7 @@ vector<Target> generateRandomTargets(int count, double range, RandomGenerator& r
     return targets;
 }
 
+// Move targets around realistically
 void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGenerator& rng) {
     static double currentTime = 0.0;
     
@@ -117,8 +122,8 @@ void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGener
         if (movementPatterns.find(id) == movementPatterns.end()) {
             // Create unique movement pattern for each target
             movementPatterns[id] = Vector2D(
-                rng.getRandomDouble(-3.0, 3.0),
-                rng.getRandomDouble(-3.0, 3.0)
+                rng.getRandomDouble(-3.0, 3.0),  // X speed
+                rng.getRandomDouble(-3.0, 3.0)    // Y speed
             );
         }
         
@@ -142,6 +147,7 @@ void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGener
     }
 }
 
+// Keyboard functions for Windows
 char waitForKey() {
     return _getch();
 }
@@ -150,6 +156,7 @@ bool keyAvailable() {
     return _kbhit() != 0;
 }
 
+// Pretty headers for different sections
 void printStatusHeader(bool autoMode, double sweepSpeed, int frameCount) {
     cout << "\033[36m"; // Cyan color
     
@@ -186,9 +193,10 @@ void printFooter() {
     cout << "└────────────────────────────────────────────────────────────────┘\033[0m\n";
 }
 
+// main simulation loop
 void runRadarSimulation() {
     RandomGenerator rng;
-    Radar radar(Vector2D(0, 0), 1000.0);
+    Radar radar(Vector2D(0, 0), 1000.0); // Radar at center, 1000m range
     ConsoleUI ui;
     
     // Set initial sweep speed
@@ -216,7 +224,7 @@ void runRadarSimulation() {
     
     // Wait for first key
     char startKey = waitForKey();
-    if (startKey == 27) return;
+    if (startKey == 27) return; //ESC
     
     // Main simulation loop
     while (running) {

@@ -41,20 +41,20 @@ class Radar {
     Radar& operator=(const Radar&) = delete;
 
     //Queue operations
-    void enqueueEvent(const DetectionEvent& event);
-    DetectionEvent dequeueEvent();
-    bool isQueueEmpty() const;
+    void enqueueEvent(const DetectionEvent& event); // add queue
+    DetectionEvent dequeueEvent();  // take from queue
+    bool isQueueEmpty() const; // check if empty
     bool isQueueFull() const;
     void clearQueue();
 
     //sweep operations
-    void initializeSweep();
-    void advanceSweep();
-    double getCurrentSweepAngle() const;
+    void initializeSweep();  // start sweeping
+    void advanceSweep();  // move to next position
+    double getCurrentSweepAngle() const; // where its pointing
 
     //detection system
-    void updateDetections(Target* allTargets, int targetCount);
-    void printDetectionEvents();
+    void updateDetections(Target* allTargets, int targetCount); // find whats visible
+    void printDetectionEvents(); // show what we found
 
 
      //PHASE 1/2 imp
@@ -74,11 +74,11 @@ class Radar {
  
      These outputs are used for targeting, tracking, and engagement decisions.*/
      void analyzeTarget(const Target& target, 
-                  double& horizontalDist, 
-                  double& displacement, 
-                  double& bearing, 
-                  string& direction) const;
+                  double& horizontalDist,  // Straight line distance
+                  double& displacement,   // Vector magnitude
+                  double& bearing,  // Angle to target
+                  string& direction) const; // Like "NE", "SW"
 
 
 };
-#endif
+#endif  // RADAR_HPP

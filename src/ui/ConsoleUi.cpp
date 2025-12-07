@@ -29,14 +29,15 @@ public:
     }
 };
 
+// Setup UI, clear grids, start timers
 ConsoleUI::ConsoleUI() 
     : stackTop(nullptr), stackSize(0),
       refreshFront(0), refreshRear(0), refreshCount(0),
       frameRate(0.0), frameCount(0), sweepSpeed(45.0) {
     
     // Initialize grids with empty spaces
-    clearGrid(radarGrid);
-    clearGrid(prevRadarGrid);
+    clearGrid(radarGrid); // current frame
+    clearGrid(prevRadarGrid); // Previous frame (for animation)
     
     // Initialize refresh queue
     for (int i = 0; i < MAX_REFRESH_QUEUE; i++) {
@@ -44,12 +45,13 @@ ConsoleUI::ConsoleUI()
     }
     
     // Initialize colors if on Windows
-    initColors();
+    initColors(); // Setup terminal colors
     
     lastFrameTime = chrono::high_resolution_clock::now();
     lastSweepTime = lastFrameTime;
 }
 
+// Cleanup frame stack
 ConsoleUI::~ConsoleUI() {
     clearStack();
 }
@@ -65,6 +67,7 @@ void ConsoleUI::initColors() {
     SetConsoleMode(hConsole, dwMode);
 }
 
+// Fill grid with spaces
 void ConsoleUI::clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     for (int y = 0; y < GRID_HEIGHT; y++) {
         for (int x = 0; x < GRID_WIDTH; x++) {
@@ -73,6 +76,7 @@ void ConsoleUI::clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     }
 }
 
+// Copy one grid to another (for animation)
 void ConsoleUI::copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID_HEIGHT][GRID_WIDTH]) {
     for (int y = 0; y < GRID_HEIGHT; y++) {
         for (int x = 0; x < GRID_WIDTH; x++) {
@@ -83,6 +87,7 @@ void ConsoleUI::copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID
 
 // ========== MANUAL STACK IMPLEMENTATION ==========
 
+// Save current radar screen to stack
 void ConsoleUI::pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle) {
     // Get current time
     auto now = chrono::high_resolution_clock::now();
@@ -125,6 +130,7 @@ void ConsoleUI::pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweep
     stackSize++;
 }
 
+// Remove top frame (called during undo)
 bool ConsoleUI::popFrame() {
     if (stackTop == nullptr) {
         return false;
@@ -138,10 +144,12 @@ bool ConsoleUI::popFrame() {
     return true;
 }
 
+// Look at top frame without removing
 FrameNode* ConsoleUI::peekFrame() const {
     return stackTop;
 }
 
+// Empty the stack
 void ConsoleUI::clearStack() {
     while (stackTop != nullptr) {
         FrameNode* temp = stackTop;
@@ -151,6 +159,7 @@ void ConsoleUI::clearStack() {
     stackSize = 0;
 }
 
+// User presses 'U' - go back one frame
 bool ConsoleUI::undoLastFrame() {
     // Need at least 2 frames to undo (current + previous)
     if (stackSize <= 1) {
@@ -236,6 +245,7 @@ void ConsoleUI::worldToGrid(const Vector2D& worldPos, const Radar& radar,
     gridY = max(0, min(GRID_HEIGHT - 1, gridY));
 }
 
+// Draw radar range circles
 void ConsoleUI::drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     int centerX = GRID_WIDTH / 2;
     int centerY = GRID_HEIGHT / 2;
@@ -243,7 +253,7 @@ void ConsoleUI::drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     // Draw circle using parametric equations
     int radius = min(centerX, centerY) - 1;
     
-    // Draw three concentric circles
+    // Draw three concentric circles at 33%, 66%, 100% range
     for (int r = 1; r <= 3; r++) {
         int circleRadius = radius * r / 3;
         for (int angle = 0; angle < 360; angle += 5) {
@@ -252,9 +262,9 @@ void ConsoleUI::drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]) {
             int y = centerY + static_cast<int>(circleRadius * sin(rad));
             
             if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-                if (r == 1) grid[y][x] = '.';
-                else if (r == 2) grid[y][x] = ':';
-                else grid[y][x] = '*';
+                if (r == 1) grid[y][x] = '.'; // inner circle
+                else if (r == 2) grid[y][x] = ':'; //middle circle
+                else grid[y][x] = '*'; // outer circle
             }
         }
     }
@@ -267,6 +277,7 @@ void ConsoleUI::drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     if (centerX < GRID_WIDTH - 1) grid[centerY][centerX + 1] = '-';
 }
 
+// Draw N, E, S, W compass directions
 void ConsoleUI::drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     // Draw compass directions at edges
     // North
@@ -293,6 +304,7 @@ void ConsoleUI::drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     }
 }
 
+// Draw sweeping radar line (with animation)
 void ConsoleUI::drawSweepLine(char grid[GRID_HEIGHT][GRID_WIDTH], double angle, const Radar& radar) {
     int centerX = GRID_WIDTH / 2;
     int centerY = GRID_HEIGHT / 2;
@@ -347,6 +359,7 @@ void ConsoleUI::drawSweepLine(char grid[GRID_HEIGHT][GRID_WIDTH], double angle, 
     }
 }
 
+// Draw targets on radar (X = unknown, F = friendly)
 void ConsoleUI::drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const vector<Target>& targets, const Radar& radar) {
     for (const Target& target : targets) {
         if (!radar.isInRange(target)) {
@@ -375,6 +388,7 @@ void ConsoleUI::drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const vector<Tar
     }
 }
 
+// Draw info panel (HUD) at bottom
 void ConsoleUI::drawHUD(const Radar& radar, const vector<Target>& targets) {
     // Count targets by type
     int unknownCount = 0;
@@ -614,27 +628,32 @@ void ConsoleUI::renderTargetInfo(const Target& target, const Radar& radar) {
     info << "                     TARGET INFORMATION                       \n";
     info << "--------------------------------------------------------------\n";
     
+     // ID and type line
     string targetIdLine = "ID: " + target.getId() + 
                          " Type: " + (target.getType() == TargetType::UNKNOWN ? "UNKNOWN" : "FRIENDLY");
-    int idPadding = 49 - targetIdLine.length();
+    int idPadding = 49 - targetIdLine.length();  // Pad to 49 chars for alignment
     info << " " << targetIdLine << string(max(0, idPadding), ' ') << "\n";
     
+       // Position and height line
     string posLine = "Position: (" + to_string(static_cast<int>(target.getPosition().x)) + 
                      ", " + to_string(static_cast<int>(target.getPosition().y)) + 
                      ") Height: " + to_string(static_cast<int>(target.getHeight()));
     int posPadding = 49 - posLine.length();
     info << " " << posLine << string(max(0, posPadding), ' ') << "\n";
     
+     // Distance info
     string distLine = "Horizontal Distance: " + formatDouble(horizontalDist, 1) + 
                      " Displacement: " + formatDouble(displacement, 1);
     int distPadding = 49 - distLine.length();
     info << " " << distLine << string(max(0, distPadding), ' ') << "\n";
     
+      // Direction info
     string bearingLine = "Bearing: " + formatDouble(bearing, 1) + 
                         " deg Direction: " + direction;
     int bearingPadding = 49 - bearingLine.length();
     info << " " << bearingLine << string(max(0, bearingPadding), ' ') << "\n";
     
+       // Speed info
     string speedLine = "Speed: " + formatDouble(target.getSpeed(), 1) + 
                       " Velocity: (" + formatDouble(target.getVelocity().x, 1) + 
                       ", " + formatDouble(target.getVelocity().y, 1) + ")";
@@ -643,7 +662,7 @@ void ConsoleUI::renderTargetInfo(const Target& target, const Radar& radar) {
     
     info << "==============================================================";
     
-    enqueueRefresh(info.str());
+    enqueueRefresh(info.str()); // Add to message queue for display
 }
 
 void ConsoleUI::renderFiringSolution(const Gun& gun, const Target& target) {
@@ -681,22 +700,26 @@ void ConsoleUI::renderSystemStatus(const Radar& radar, int totalTargets,
     status << "                     SYSTEM STATUS (Phase 6)                 \n";
     status << "--------------------------------------------------------------\n";
     
+        // Line 1: Radar sweep info
     string sweepLine = "Sweep Angle: " + formatDouble(radar.getCurrentSweepAngle(), 1) + 
                       " deg Speed: " + formatDouble(sweepSpeed, 1) + " deg/sec";
     int sweepPadding = 49 - sweepLine.length();
     status << " " << sweepLine << string(max(0, sweepPadding), ' ') << "\n";
     
+     // Line 2: Frame and performance stats
     string frameLine = "Frame Stack: " + to_string(stackSize) + 
                       "/" + to_string(MAX_FRAME_STACK) + 
                       " FPS: " + formatDouble(frameRate, 1);
     int framePadding = 49 - frameLine.length();
     status << " " << frameLine << string(max(0, framePadding), ' ') << "\n";
     
+     // Line 3: Target tracking stats
     string targetLine = "Targets Tracked: " + to_string(detectedTargets) + 
                        "/" + to_string(totalTargets);
     int targetPadding = 49 - targetLine.length();
     status << " " << targetLine << string(max(0, targetPadding), ' ') << "\n";
     
+       // Line 4: Undo stack info with control hint
     string stackInfo = "Stack Depth: " + to_string(stackSize) + 
                       " (Press 'U' to undo)";
     int stackPadding = 49 - stackInfo.length();
@@ -704,7 +727,7 @@ void ConsoleUI::renderSystemStatus(const Radar& radar, int totalTargets,
     
     status << "==============================================================";
     
-    enqueueRefresh(status.str());
+    enqueueRefresh(status.str()); // Send to display queue
 }
 
 void ConsoleUI::updateFrameRate() {
@@ -715,9 +738,9 @@ void ConsoleUI::updateFrameRate() {
     
     // Update frame rate every second
     if (elapsed.count() >= 1.0) {
-        frameRate = frameCount / elapsed.count();
-        frameCount = 0;
-        lastFrameTime = currentTime;
+        frameRate = frameCount / elapsed.count(); // frames per second
+        frameCount = 0; // reset counter
+        lastFrameTime = currentTime; // reset timer
     }
 }
 
@@ -733,6 +756,6 @@ void ConsoleUI::setCursorPosition(int x, int y) {
 
 string ConsoleUI::formatDouble(double value, int precision) {
     stringstream ss;
-    ss << fixed << setprecision(precision) << value;
+    ss << fixed << setprecision(precision) << value; // format: 45.0
     return ss.str();
 }

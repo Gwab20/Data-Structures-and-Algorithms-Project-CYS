@@ -10,8 +10,8 @@
 // Stack node for storing previous frames
 struct FrameNode {
     char grid[21][61];  // GRID_HEIGHT x GRID_WIDTH
-    double sweepAngle;
-    double timestamp;
+    double sweepAngle; 
+    double timestamp; // when this frame was shown
     FrameNode* next;  // For linked list stack
     
     FrameNode(const char gridCopy[21][61], double angle, double time);
@@ -24,26 +24,26 @@ private:
     static const int GRID_HEIGHT = 21;
     
     // ASCII grid for radar display - double buffering
-    char radarGrid[GRID_HEIGHT][GRID_WIDTH];
-    char prevRadarGrid[GRID_HEIGHT][GRID_WIDTH];
-    
+    char radarGrid[GRID_HEIGHT][GRID_WIDTH]; // current frame
+    char prevRadarGrid[GRID_HEIGHT][GRID_WIDTH]; // previous frame
+     
     // Manual stack implementation for frame undo functionality
-    FrameNode* stackTop;
-    int stackSize;
-    static const int MAX_FRAME_STACK = 10;
+    FrameNode* stackTop; 
+    int stackSize; // how many frames are stored
+    static const int MAX_FRAME_STACK = 10; // max frames to remember
     
     // Screen refresh management
     static const int MAX_REFRESH_QUEUE = 20;
     std::string refreshQueue[MAX_REFRESH_QUEUE];
-    int refreshFront;
-    int refreshRear;
-    int refreshCount;
+    int refreshFront; // where to take messages from
+    int refreshRear; // where to add messages
+    int refreshCount; // how many messages are waiting
     
     // Performance tracking
     std::chrono::high_resolution_clock::time_point lastFrameTime;
     std::chrono::high_resolution_clock::time_point lastSweepTime;
-    double frameRate;
-    int frameCount;
+    double frameRate; // FPS counter
+    int frameCount; // frame counter
     double sweepSpeed;  // Degrees per second
     
     // Colors for different target types
@@ -56,26 +56,26 @@ private:
     };
     
     // Helper methods
-    void initColors();
-    void clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]);
-    void copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID_HEIGHT][GRID_WIDTH]);
+    void initColors(); // setup terminal colors
+    void clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]); //empty grid
+    void copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID_HEIGHT][GRID_WIDTH]); 
     void drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]);
-    void drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]);
+    void drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]); // draw N,E,S,W labels
     void drawSweepLine(char grid[GRID_HEIGHT][GRID_WIDTH], double angle, const Radar& radar);
     void drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const std::vector<Target>& targets, const Radar& radar);
     void drawHUD(const Radar& radar, const std::vector<Target>& targets);
     
     // Manual stack operations
-    void pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle);
-    bool popFrame();
+    void pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle); // save frame
+    bool popFrame(); //remove frame
     FrameNode* peekFrame() const;
-    void clearStack();
+    void clearStack(); // empty stack
     
     // Queue operations for screen refresh
-    void enqueueRefresh(const std::string& message);
-    std::string dequeueRefresh();
-    bool isRefreshQueueEmpty() const;
-    bool isRefreshQueueFull() const;
+    void enqueueRefresh(const std::string& message); // add message
+    std::string dequeueRefresh(); // get message
+    bool isRefreshQueueEmpty() const; // any messages?
+    bool isRefreshQueueFull() const; // Queue full?
     
     // Coordinate mapping
     void worldToGrid(const Vector2D& worldPos, const Radar& radar, 
