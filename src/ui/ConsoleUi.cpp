@@ -30,11 +30,13 @@ public:
 };
 
 ConsoleUI::ConsoleUI() 
-    : refreshFront(0), refreshRear(0), refreshCount(0),
-      frameRate(0.0), frameCount(0) {
+    : stackTop(nullptr), stackSize(0),
+      refreshFront(0), refreshRear(0), refreshCount(0),
+      frameRate(0.0), frameCount(0), sweepSpeed(45.0) {
     
-    // Initialize grid with empty spaces
-    clearGrid();
+    // Initialize grids with empty spaces
+    clearGrid(radarGrid);
+    clearGrid(prevRadarGrid);
     
     // Initialize refresh queue
     for (int i = 0; i < MAX_REFRESH_QUEUE; i++) {
@@ -45,10 +47,11 @@ ConsoleUI::ConsoleUI()
     initColors();
     
     lastFrameTime = chrono::high_resolution_clock::now();
+    lastSweepTime = lastFrameTime;
 }
 
 ConsoleUI::~ConsoleUI() {
-    // Nothing to clean up
+    clearStack();
 }
 
 void ConsoleUI::initColors() {
@@ -56,16 +59,154 @@ void ConsoleUI::initColors() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     
     // Define color pairs
-    // Unknown: Red on black (4), Friendly: Green (2), Radar: Cyan (3), Sweep: Yellow (6)
-    // This is just setup - actual color application would need more implementation
+    DWORD dwMode = 0;
+    GetConsoleMode(hConsole, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hConsole, dwMode);
 }
 
-void ConsoleUI::clearGrid() {
+void ConsoleUI::clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     for (int y = 0; y < GRID_HEIGHT; y++) {
         for (int x = 0; x < GRID_WIDTH; x++) {
-            radarGrid[y][x] = ' ';
+            grid[y][x] = ' ';
         }
     }
+}
+
+void ConsoleUI::copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID_HEIGHT][GRID_WIDTH]) {
+    for (int y = 0; y < GRID_HEIGHT; y++) {
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            dest[y][x] = src[y][x];
+        }
+    }
+}
+
+// ========== MANUAL STACK IMPLEMENTATION ==========
+
+void ConsoleUI::pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle) {
+    // Get current time
+    auto now = chrono::high_resolution_clock::now();
+    auto duration = now.time_since_epoch();
+    double timestamp = chrono::duration<double>(duration).count();
+    
+    // Create new frame node
+    FrameNode* newNode = new FrameNode(grid, sweepAngle, timestamp);
+    
+    // If stack is full, remove oldest frame (bottom of stack)
+    if (stackSize >= MAX_FRAME_STACK) {
+        // Find the second last node
+        if (stackTop != nullptr && stackTop->next != nullptr) {
+            FrameNode* current = stackTop;
+            FrameNode* prev = nullptr;
+            
+            // Traverse to find second last node
+            while (current->next != nullptr) {
+                prev = current;
+                current = current->next;
+            }
+            
+            // Remove the last node (oldest frame)
+            if (prev != nullptr) {
+                delete prev->next;
+                prev->next = nullptr;
+                stackSize--;
+            }
+        } else if (stackTop != nullptr) {
+            // Only one node in stack
+            delete stackTop;
+            stackTop = nullptr;
+            stackSize = 0;
+        }
+    }
+    
+    // Push new node onto stack
+    newNode->next = stackTop;
+    stackTop = newNode;
+    stackSize++;
+}
+
+bool ConsoleUI::popFrame() {
+    if (stackTop == nullptr) {
+        return false;
+    }
+    
+    FrameNode* temp = stackTop;
+    stackTop = stackTop->next;
+    delete temp;
+    stackSize--;
+    
+    return true;
+}
+
+FrameNode* ConsoleUI::peekFrame() const {
+    return stackTop;
+}
+
+void ConsoleUI::clearStack() {
+    while (stackTop != nullptr) {
+        FrameNode* temp = stackTop;
+        stackTop = stackTop->next;
+        delete temp;
+    }
+    stackSize = 0;
+}
+
+bool ConsoleUI::undoLastFrame() {
+    // Need at least 2 frames to undo (current + previous)
+    if (stackSize <= 1) {
+        stringstream msg;
+        msg << "╔══════════════════════════════════════════════════════════════╗\n";
+        msg << "║               CANNOT UNDO - Need more frames                 ║\n";
+        msg << "╚══════════════════════════════════════════════════════════════╝";
+        enqueueRefresh(msg.str());
+        return false;
+    }
+    
+    // Pop current frame
+    if (!popFrame()) {
+        return false;
+    }
+    
+    // Get previous frame (now at top)
+    FrameNode* prevFrame = peekFrame();
+    if (prevFrame == nullptr) {
+        return false;
+    }
+    
+    // Restore grid from previous frame
+    for (int y = 0; y < GRID_HEIGHT; y++) {
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            radarGrid[y][x] = prevFrame->grid[y][x];
+        }
+    }
+    
+    // Add undo message
+    stringstream msg;
+    msg << "╔══════════════════════════════════════════════════════════════╗\n";
+    msg << "║               FRAME UNDO - Sweep: " 
+        << setw(6) << setprecision(1) << fixed << prevFrame->sweepAngle << "°              ║\n";
+    msg << "╚══════════════════════════════════════════════════════════════╝";
+    enqueueRefresh(msg.str());
+    
+    return true;
+}
+
+// ========== ANIMATION METHODS ==========
+
+bool ConsoleUI::shouldAdvanceSweep() {
+    auto currentTime = chrono::high_resolution_clock::now();
+    chrono::duration<double> elapsed = currentTime - lastSweepTime;
+    
+    // Calculate if enough time has passed for sweep advancement
+    // Based on sweepSpeed (degrees per second)
+    double timePerDegree = 1.0 / sweepSpeed;
+    
+    if (elapsed.count() >= timePerDegree) {
+        lastSweepTime = currentTime;
+        return true;
+    }
+    
+    return false;
 }
 
 void ConsoleUI::worldToGrid(const Vector2D& worldPos, const Radar& radar, 
@@ -88,8 +229,7 @@ void ConsoleUI::worldToGrid(const Vector2D& worldPos, const Radar& radar,
     gridY = max(0, min(GRID_HEIGHT - 1, gridY));
 }
 
-void ConsoleUI::drawRadarCircle() {
-    // Draw radar circle (concentric circles)
+void ConsoleUI::drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     int centerX = GRID_WIDTH / 2;
     int centerY = GRID_HEIGHT / 2;
     
@@ -105,77 +245,48 @@ void ConsoleUI::drawRadarCircle() {
             int y = centerY + static_cast<int>(circleRadius * sin(rad));
             
             if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
-                if (r == 1) radarGrid[y][x] = '.';
-                else if (r == 2) radarGrid[y][x] = ':';
-                else radarGrid[y][x] = '*';
+                if (r == 1) grid[y][x] = '.';
+                else if (r == 2) grid[y][x] = ':';
+                else grid[y][x] = '*';
             }
         }
     }
     
     // Draw center crosshair
-    radarGrid[centerY][centerX] = '+';
-    if (centerY > 0) radarGrid[centerY - 1][centerX] = '|';
-    if (centerY < GRID_HEIGHT - 1) radarGrid[centerY + 1][centerX] = '|';
-    if (centerX > 0) radarGrid[centerY][centerX - 1] = '-';
-    if (centerX < GRID_WIDTH - 1) radarGrid[centerY][centerX + 1] = '-';
+    grid[centerY][centerX] = '+';
+    if (centerY > 0) grid[centerY - 1][centerX] = '|';
+    if (centerY < GRID_HEIGHT - 1) grid[centerY + 1][centerX] = '|';
+    if (centerX > 0) grid[centerY][centerX - 1] = '-';
+    if (centerX < GRID_WIDTH - 1) grid[centerY][centerX + 1] = '-';
 }
 
-void ConsoleUI::drawCompass() {
+void ConsoleUI::drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]) {
     // Draw compass directions at edges
     // North
     if (GRID_WIDTH / 2 >= 0 && GRID_WIDTH / 2 < GRID_WIDTH) {
-        radarGrid[0][GRID_WIDTH / 2] = 'N';
+        grid[0][GRID_WIDTH / 2] = 'N';
     }
     
     // South
     if (GRID_WIDTH / 2 >= 0 && GRID_WIDTH / 2 < GRID_WIDTH && 
         GRID_HEIGHT - 1 >= 0 && GRID_HEIGHT - 1 < GRID_HEIGHT) {
-        radarGrid[GRID_HEIGHT - 1][GRID_WIDTH / 2] = 'S';
+        grid[GRID_HEIGHT - 1][GRID_WIDTH / 2] = 'S';
     }
     
     // East
     if (GRID_WIDTH - 1 >= 0 && GRID_WIDTH - 1 < GRID_WIDTH && 
         GRID_HEIGHT / 2 >= 0 && GRID_HEIGHT / 2 < GRID_HEIGHT) {
-        radarGrid[GRID_HEIGHT / 2][GRID_WIDTH - 1] = 'E';
+        grid[GRID_HEIGHT / 2][GRID_WIDTH - 1] = 'E';
     }
     
     // West
     if (0 >= 0 && 0 < GRID_WIDTH && 
         GRID_HEIGHT / 2 >= 0 && GRID_HEIGHT / 2 < GRID_HEIGHT) {
-        radarGrid[GRID_HEIGHT / 2][0] = 'W';
-    }
-    
-    // Intermediate directions (NE, NW, SE, SW)
-    if (GRID_WIDTH - 3 >= 0 && GRID_WIDTH - 3 < GRID_WIDTH && 
-        GRID_WIDTH - 2 >= 0 && GRID_WIDTH - 2 < GRID_WIDTH &&
-        2 >= 0 && 2 < GRID_HEIGHT) {
-        radarGrid[2][GRID_WIDTH - 3] = 'N';
-        radarGrid[2][GRID_WIDTH - 2] = 'E';
-    }
-    
-    if (2 >= 0 && 2 < GRID_WIDTH && 
-        1 >= 0 && 1 < GRID_WIDTH &&
-        2 >= 0 && 2 < GRID_HEIGHT) {
-        radarGrid[2][2] = 'N';
-        radarGrid[2][1] = 'W';
-    }
-    
-    if (2 >= 0 && 2 < GRID_WIDTH && 
-        1 >= 0 && 1 < GRID_WIDTH &&
-        GRID_HEIGHT - 3 >= 0 && GRID_HEIGHT - 3 < GRID_HEIGHT) {
-        radarGrid[GRID_HEIGHT - 3][2] = 'S';
-        radarGrid[GRID_HEIGHT - 3][1] = 'W';
-    }
-    
-    if (GRID_WIDTH - 3 >= 0 && GRID_WIDTH - 3 < GRID_WIDTH && 
-        GRID_WIDTH - 2 >= 0 && GRID_WIDTH - 2 < GRID_WIDTH &&
-        GRID_HEIGHT - 3 >= 0 && GRID_HEIGHT - 3 < GRID_HEIGHT) {
-        radarGrid[GRID_HEIGHT - 3][GRID_WIDTH - 3] = 'S';
-        radarGrid[GRID_HEIGHT - 3][GRID_WIDTH - 2] = 'E';
+        grid[GRID_HEIGHT / 2][0] = 'W';
     }
 }
 
-void ConsoleUI::drawSweepLine(double angle, const Radar& radar) {
+void ConsoleUI::drawSweepLine(char grid[GRID_HEIGHT][GRID_WIDTH], double angle, const Radar& radar) {
     int centerX = GRID_WIDTH / 2;
     int centerY = GRID_HEIGHT / 2;
     int radius = min(centerX, centerY) - 1;
@@ -183,24 +294,53 @@ void ConsoleUI::drawSweepLine(double angle, const Radar& radar) {
     // Convert angle to radians
     double rad = angle * M_PI / 180.0;
     
-    // Draw sweep line using simple ray casting
-    for (int r = 1; r <= radius; r++) {
+    // Static storage for previous sweep positions
+    static int prevSweepPositions[100][2];  // Store up to 100 positions
+    static int prevSweepCount = 0;
+    
+    // Erase previous sweep line
+    for (int i = 0; i < prevSweepCount; i++) {
+        int x = prevSweepPositions[i][0];
+        int y = prevSweepPositions[i][1];
+        
+        if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+            // Restore what was there before from previous frame
+            grid[y][x] = prevRadarGrid[y][x];
+        }
+    }
+    
+    // Reset for new sweep line
+    prevSweepCount = 0;
+    
+    // Draw new sweep line using simple ray casting
+    for (int r = 1; r <= radius && prevSweepCount < 100; r++) {
         int x = centerX + static_cast<int>(r * cos(rad));
         int y = centerY - static_cast<int>(r * sin(rad)); // Negative because screen Y increases downward
         
         if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+            // Store position for erasing next frame
+            prevSweepPositions[prevSweepCount][0] = x;
+            prevSweepPositions[prevSweepCount][1] = y;
+            prevSweepCount++;
+            
             // Use different characters for sweep effect
             char sweepChar;
-            if (r % 3 == 0) sweepChar = '\\';
-            else if (r % 3 == 1) sweepChar = '/';
+            int pattern = r % 3;
+            if (pattern == 0) sweepChar = '\\';
+            else if (pattern == 1) sweepChar = '/';
             else sweepChar = '|';
             
-            radarGrid[y][x] = sweepChar;
+            // Only overwrite if not a target or fixed radar element
+            char current = grid[y][x];
+            if (current == ' ' || current == '.' || current == ':' || current == '*' || 
+                current == 'N' || current == 'S' || current == 'E' || current == 'W') {
+                grid[y][x] = sweepChar;
+            }
         }
     }
 }
 
-void ConsoleUI::drawTargets(const vector<Target>& targets, const Radar& radar) {
+void ConsoleUI::drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const vector<Target>& targets, const Radar& radar) {
     for (const Target& target : targets) {
         if (!radar.isInRange(target)) {
             continue; // Skip targets out of range
@@ -223,7 +363,7 @@ void ConsoleUI::drawTargets(const vector<Target>& targets, const Radar& radar) {
         
         // Ensure we're within bounds
         if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
-            radarGrid[gridY][gridX] = symbol;
+            grid[gridY][gridX] = symbol;
         }
     }
 }
@@ -312,32 +452,99 @@ bool ConsoleUI::isRefreshQueueFull() const {
 }
 
 void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& targets) {
-    // Clear the grid
-    clearGrid();
+    // Store previous frame before changes (for sweep line erasing)
+    copyGrid(prevRadarGrid, radarGrid);
+    
+    // Clear the current grid
+    clearGrid(radarGrid);
     
     // Draw radar elements
-    drawRadarCircle();
-    drawCompass();
-    drawSweepLine(radar.getCurrentSweepAngle(), radar);
-    drawTargets(targets, radar);
+    drawRadarCircle(radarGrid);
+    drawCompass(radarGrid);
+    
+    // Get current sweep angle
+    double sweepAngle = radar.getCurrentSweepAngle();
+    
+    // Draw sweep line with animation
+    drawSweepLine(radarGrid, sweepAngle, radar);
+    
+    // Draw targets
+    drawTargets(radarGrid, targets, radar);
+    
+    // Push current frame to manual stack for undo functionality
+    pushFrame(radarGrid, sweepAngle);
     
     // Print the radar grid
     clearScreen();
     
+    // Draw radar display with animation effects
     cout << "╔══════════════════════════════════════════════════════════════╗\n";
-    cout << "║                         RADAR DISPLAY                        ║\n";
+    cout << "║                   LIVE RADAR DISPLAY (Phase 6)               ║\n";
     cout << "╠══════════════════════════════════════════════════════════════╣\n";
     
+    // Animated border effect using static counter
+    static int borderAnim = 0;
+    borderAnim = (borderAnim + 1) % 60;  // Slower animation
+    
+    // Draw the radar grid
     for (int y = 0; y < GRID_HEIGHT; y++) {
-        cout << "║";
-        for (int x = 0; x < GRID_WIDTH; x++) {
-            cout << radarGrid[y][x];
+        // Animated border character
+        char leftBorder = '║';
+        char rightBorder = '║';
+        
+        // Pulsing effect on borders
+        if ((borderAnim / 10) % 2 == 0) {
+            if (y % 3 == 0) {
+                leftBorder = '▓';
+                rightBorder = '▓';
+            }
         }
-        cout << "║\n";
+        
+        cout << leftBorder;
+        
+        // Display grid row
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            char displayChar = radarGrid[y][x];
+            
+            // Special handling for sweep line characters (make them "pulse")
+            if (displayChar == '\\' || displayChar == '/' || displayChar == '|') {
+                // Create a pulsing effect based on frame count
+                static int pulseCounter = 0;
+                pulseCounter++;
+                
+                // Every 3 frames, change intensity
+                if ((pulseCounter / 3) % 2 == 0) {
+                    // Bright sweep line
+                    cout << displayChar;
+                } else {
+                    // Dim sweep line
+                    cout << displayChar;  // Could use different character for dim effect
+                }
+            } else {
+                cout << displayChar;
+            }
+        }
+        
+        cout << rightBorder << "\n";
     }
     
+    // Bottom section with stack info
     cout << "╠══════════════════════════════════════════════════════════════╣\n";
-    cout << "║ Legend: [R] Radar  [X] Unknown  [F] Friendly  [/|\\] Sweep   ║\n";
+    cout << "║ Stack: " << setw(2) << stackSize << "/" << MAX_FRAME_STACK 
+         << " frames | Sweep: " << setw(6) << setprecision(1) << fixed << sweepAngle 
+         << "° | Speed: " << setw(5) << sweepSpeed << "°/sec" << " ║\n";
+    
+    // Animation status bar
+    string animBar = "[";
+    int barLength = 20;
+    int filled = (borderAnim % barLength);
+    for (int i = 0; i < barLength; i++) {
+        if (i <= filled) animBar += "█";
+        else animBar += "░";
+    }
+    animBar += "]";
+    
+    cout << "║ Animation: " << animBar << " " << string(27, ' ') << "║\n";
     cout << "╚══════════════════════════════════════════════════════════════╝\n";
     cout << "\n";
     
@@ -351,6 +558,16 @@ void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& tar
     
     // Update frame rate
     updateFrameRate();
+    
+    // Display sweep advancement status
+    if (shouldAdvanceSweep()) {
+        stringstream animMsg;
+        animMsg << "╔══════════════════════════════════════════════════════════════╗\n";
+        animMsg << "║               SWEEP ADVANCING - " 
+                << setw(6) << setprecision(1) << fixed << sweepSpeed << "°/sec              ║\n";
+        animMsg << "╚══════════════════════════════════════════════════════════════╝";
+        enqueueRefresh(animMsg.str());
+    }
 }
 
 void ConsoleUI::renderTargetInfo(const Target& target, const Radar& radar) {
@@ -428,21 +645,29 @@ void ConsoleUI::renderSystemStatus(const Radar& radar, int totalTargets,
     stringstream status;
     
     status << "╔══════════════════════════════════════════════════════════════╗\n";
-    status << "║                     SYSTEM STATUS                           ║\n";
+    status << "║                     SYSTEM STATUS (Phase 6)                 ║\n";
     status << "╠══════════════════════════════════════════════════════════════╣\n";
     
-    string sweepLine = "Sweep Angle: " + formatDouble(radar.getCurrentSweepAngle(), 1) + "°";
+    string sweepLine = "Sweep Angle: " + formatDouble(radar.getCurrentSweepAngle(), 1) + 
+                      "° Speed: " + formatDouble(sweepSpeed, 1) + "°/sec";
     int sweepPadding = 49 - sweepLine.length();
     status << "║ " << sweepLine << string(max(0, sweepPadding), ' ') << "║\n";
+    
+    string frameLine = "Frame Stack: " + to_string(stackSize) + 
+                      "/" + to_string(MAX_FRAME_STACK) + 
+                      " FPS: " + formatDouble(frameRate, 1);
+    int framePadding = 49 - frameLine.length();
+    status << "║ " << frameLine << string(max(0, framePadding), ' ') << "║\n";
     
     string targetLine = "Targets Tracked: " + to_string(detectedTargets) + 
                        "/" + to_string(totalTargets);
     int targetPadding = 49 - targetLine.length();
     status << "║ " << targetLine << string(max(0, targetPadding), ' ') << "║\n";
     
-    string gunLine = "Gun Ready: YES";
-    int gunPadding = 49 - gunLine.length();
-    status << "║ " << gunLine << string(max(0, gunPadding), ' ') << "║\n";
+    string stackInfo = "Stack Depth: " + to_string(stackSize) + 
+                      " (Press 'U' to undo)";
+    int stackPadding = 49 - stackInfo.length();
+    status << "║ " << stackInfo << string(max(0, stackPadding), ' ') << "║\n";
     
     status << "╚══════════════════════════════════════════════════════════════╝";
     
@@ -465,7 +690,6 @@ void ConsoleUI::updateFrameRate() {
 
 void ConsoleUI::clearScreen() {
     // Use ANSI escape codes for cross-platform screen clearing
-    // This works on Windows 10+ with virtual terminal enabled
     cout << "\033[2J\033[1;1H";
 }
 
