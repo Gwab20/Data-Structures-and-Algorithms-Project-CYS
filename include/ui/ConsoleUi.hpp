@@ -7,14 +7,30 @@
 #include <string>
 #include <chrono>
 
+// Stack node for storing previous frames
+struct FrameNode {
+    char grid[21][61];  // GRID_HEIGHT x GRID_WIDTH
+    double sweepAngle;
+    double timestamp;
+    FrameNode* next;  // For linked list stack
+    
+    FrameNode(const char gridCopy[21][61], double angle, double time);
+};
+
 class ConsoleUI {
 private:
     // Grid dimensions for ASCII radar
     static const int GRID_WIDTH = 61;
     static const int GRID_HEIGHT = 21;
     
-    // ASCII grid for radar display
+    // ASCII grid for radar display - double buffering
     char radarGrid[GRID_HEIGHT][GRID_WIDTH];
+    char prevRadarGrid[GRID_HEIGHT][GRID_WIDTH];
+    
+    // Manual stack implementation for frame undo functionality
+    FrameNode* stackTop;
+    int stackSize;
+    static const int MAX_FRAME_STACK = 10;
     
     // Screen refresh management
     static const int MAX_REFRESH_QUEUE = 20;
@@ -25,8 +41,10 @@ private:
     
     // Performance tracking
     std::chrono::high_resolution_clock::time_point lastFrameTime;
+    std::chrono::high_resolution_clock::time_point lastSweepTime;
     double frameRate;
     int frameCount;
+    double sweepSpeed;  // Degrees per second
     
     // Colors for different target types
     enum Color {
@@ -39,12 +57,19 @@ private:
     
     // Helper methods
     void initColors();
-    void clearGrid();
-    void drawRadarCircle();
-    void drawCompass();
-    void drawSweepLine(double angle, const Radar& radar);
-    void drawTargets(const std::vector<Target>& targets, const Radar& radar);
+    void clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]);
+    void copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID_HEIGHT][GRID_WIDTH]);
+    void drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]);
+    void drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]);
+    void drawSweepLine(char grid[GRID_HEIGHT][GRID_WIDTH], double angle, const Radar& radar);
+    void drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const std::vector<Target>& targets, const Radar& radar);
     void drawHUD(const Radar& radar, const std::vector<Target>& targets);
+    
+    // Manual stack operations
+    void pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle);
+    bool popFrame();
+    FrameNode* peekFrame() const;
+    void clearStack();
     
     // Queue operations for screen refresh
     void enqueueRefresh(const std::string& message);
@@ -69,6 +94,16 @@ public:
     void renderSystemStatus(const Radar& radar, int totalTargets, 
                            int detectedTargets);
     
+    // Animation control
+    bool shouldAdvanceSweep();
+    void setSweepSpeed(double degreesPerSec) { sweepSpeed = degreesPerSec; }
+    double getSweepSpeed() const { return sweepSpeed; }
+    
+    // Manual stack operations (public interface)
+    bool undoLastFrame();
+    bool canUndo() const { return stackSize > 1; }  // Need at least 2 frames to undo
+    int getStackSize() const { return stackSize; }
+    
     // Update methods
     void updateFrameRate();
     double getFrameRate() const { return frameRate; }
@@ -82,5 +117,16 @@ public:
     // Utility for formatted output
     static std::string formatDouble(double value, int precision = 1);
 };
+
+// FrameNode constructor implementation
+inline FrameNode::FrameNode(const char gridCopy[21][61], double angle, double time) 
+    : sweepAngle(angle), timestamp(time), next(nullptr) {
+    // Copy grid data
+    for (int y = 0; y < 21; y++) {
+        for (int x = 0; x < 61; x++) {
+            grid[y][x] = gridCopy[y][x];
+        }
+    }
+}
 
 #endif
