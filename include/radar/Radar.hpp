@@ -14,6 +14,7 @@ class Radar {
     double range;//Maximum detection radius (how far the radar can "see")
     Gun defenseGun; //The defensive weapon system controlled by this radar
     
+    
   //implimenting queue
     QueueNode* queueFront;
     QueueNode* queueRear;

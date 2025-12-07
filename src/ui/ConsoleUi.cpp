@@ -155,9 +155,9 @@ bool ConsoleUI::undoLastFrame() {
     // Need at least 2 frames to undo (current + previous)
     if (stackSize <= 1) {
         stringstream msg;
-        msg << "╔══════════════════════════════════════════════════════════════╗\n";
-        msg << "║               CANNOT UNDO - Need more frames                 ║\n";
-        msg << "╚══════════════════════════════════════════════════════════════╝";
+        msg << "==============================================================\n";
+        msg << "               CANNOT UNDO - Need more frames                 \n";
+        msg << "==============================================================";
         enqueueRefresh(msg.str());
         return false;
     }
@@ -182,10 +182,10 @@ bool ConsoleUI::undoLastFrame() {
     
     // Add undo message
     stringstream msg;
-    msg << "╔══════════════════════════════════════════════════════════════╗\n";
-    msg << "║               FRAME UNDO - Sweep: " 
-        << setw(6) << setprecision(1) << fixed << prevFrame->sweepAngle << "°              ║\n";
-    msg << "╚══════════════════════════════════════════════════════════════╝";
+    msg << "==============================================================\n";
+    msg << "               FRAME UNDO - Sweep: " 
+        << setw(6) << setprecision(1) << fixed << prevFrame->sweepAngle << " deg            \n";
+    msg << "==============================================================";
     enqueueRefresh(msg.str());
     
     return true;
@@ -193,7 +193,14 @@ bool ConsoleUI::undoLastFrame() {
 
 // ========== ANIMATION METHODS ==========
 
+// In ConsoleUI.cpp, update the shouldAdvanceSweep method:
+
 bool ConsoleUI::shouldAdvanceSweep() {
+    // If sweep speed is 0, never advance (true manual mode)
+    if (sweepSpeed <= 0.0) {
+        return false;
+    }
+    
     auto currentTime = chrono::high_resolution_clock::now();
     chrono::duration<double> elapsed = currentTime - lastSweepTime;
     
@@ -386,21 +393,21 @@ void ConsoleUI::drawHUD(const Radar& radar, const vector<Target>& targets) {
     hud << fixed << setprecision(1);
     
     // Header
-    hud << "╔══════════════════════════════════════════════════════════════╗\n";
-    hud << "║                    AIR DEFENSE RADAR SYSTEM                  ║\n";
-    hud << "╠══════════════════════════════════════════════════════════════╣\n";
+    hud << "==============================================================\n";
+    hud << "                    AIR DEFENSE RADAR SYSTEM                  \n";
+    hud << "==============================================================\n";
     
     // System status
     string status = (inRangeCount > 0) ? "ACTIVE TRACKING" : "SCANNING";
     int statusPadding = 49 - status.length();
-    hud << "║ Status: " << status << string(max(0, statusPadding), ' ') << "║\n";
+    hud << " Status: " << status << string(max(0, statusPadding), ' ') << "\n";
     
     // Radar info
     string radarInfo = "Radar Position: (" + to_string(static_cast<int>(radar.getPosition().x)) + 
                        ", " + to_string(static_cast<int>(radar.getPosition().y)) + 
                        ") Range: " + to_string(static_cast<int>(radar.getRange()));
     int radarPadding = 49 - radarInfo.length();
-    hud << "║ " << radarInfo << string(max(0, radarPadding), ' ') << "║\n";
+    hud << " " << radarInfo << string(max(0, radarPadding), ' ') << "\n";
     
     // Target summary
     string targetInfo = "Targets - Total: " + to_string(targets.size()) + 
@@ -408,14 +415,14 @@ void ConsoleUI::drawHUD(const Radar& radar, const vector<Target>& targets) {
                         " Unknown: " + to_string(unknownCount) + 
                         " Friendly: " + to_string(friendlyCount);
     int targetPadding = 49 - targetInfo.length();
-    hud << "║ " << targetInfo << string(max(0, targetPadding), ' ') << "║\n";
+    hud << " " << targetInfo << string(max(0, targetPadding), ' ') << "\n";
     
     // Frame rate
     string fpsInfo = "Frame Rate: " + formatDouble(frameRate, 1) + " fps";
     int fpsPadding = 49 - fpsInfo.length();
-    hud << "║ " << fpsInfo << string(max(0, fpsPadding), ' ') << "║\n";
+    hud << " " << fpsInfo << string(max(0, fpsPadding), ' ') << "\n";
     
-    hud << "╚══════════════════════════════════════════════════════════════╝";
+    hud << "==============================================================";
     
     // Add to refresh queue
     enqueueRefresh(hud.str());
@@ -451,7 +458,8 @@ bool ConsoleUI::isRefreshQueueFull() const {
     return refreshCount == MAX_REFRESH_QUEUE;
 }
 
-void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& targets) {
+// UPDATED VERSION - Now includes autoSweep parameter
+void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& targets, bool autoSweep) {
     // Store previous frame before changes (for sweep line erasing)
     copyGrid(prevRadarGrid, radarGrid);
     
@@ -478,9 +486,9 @@ void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& tar
     clearScreen();
     
     // Draw radar display with animation effects
-    cout << "╔══════════════════════════════════════════════════════════════╗\n";
-    cout << "║                   LIVE RADAR DISPLAY (Phase 6)               ║\n";
-    cout << "╠══════════════════════════════════════════════════════════════╣\n";
+    cout << "==============================================================\n";
+    cout << "                   LIVE RADAR DISPLAY (Phase 6)               \n";
+    cout << "==============================================================\n";
     
     // Animated border effect using static counter
     static int borderAnim = 0;
@@ -489,14 +497,14 @@ void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& tar
     // Draw the radar grid
     for (int y = 0; y < GRID_HEIGHT; y++) {
         // Animated border character
-        char leftBorder = '║';
-        char rightBorder = '║';
+        char leftBorder = '|';
+        char rightBorder = '|';
         
         // Pulsing effect on borders
         if ((borderAnim / 10) % 2 == 0) {
             if (y % 3 == 0) {
-                leftBorder = '▓';
-                rightBorder = '▓';
+                leftBorder = '#';
+                rightBorder = '#';
             }
         }
         
@@ -517,8 +525,10 @@ void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& tar
                     // Bright sweep line
                     cout << displayChar;
                 } else {
-                    // Dim sweep line
-                    cout << displayChar;  // Could use different character for dim effect
+                    // Dim sweep line - use different character
+                    if (displayChar == '\\') cout << '\\';
+                    else if (displayChar == '/') cout << '/';
+                    else cout << '|';
                 }
             } else {
                 cout << displayChar;
@@ -529,44 +539,65 @@ void ConsoleUI::renderRadarDisplay(const Radar& radar, const vector<Target>& tar
     }
     
     // Bottom section with stack info
-    cout << "╠══════════════════════════════════════════════════════════════╣\n";
-    cout << "║ Stack: " << setw(2) << stackSize << "/" << MAX_FRAME_STACK 
+    cout << "--------------------------------------------------------------\n";
+    cout << " Stack: " << setw(2) << stackSize << "/" << MAX_FRAME_STACK 
          << " frames | Sweep: " << setw(6) << setprecision(1) << fixed << sweepAngle 
-         << "° | Speed: " << setw(5) << sweepSpeed << "°/sec" << " ║\n";
+         << " deg | Speed: " << setw(5) << sweepSpeed << " deg/sec" << " \n";
+    
+    // MODE INDICATOR - Clear visual indicator of current mode
+    cout << "--------------------------------------------------------------\n";
+    if (autoSweep) {
+        cout << "\033[32m";  // Green for AUTO mode
+        cout << " MODE: AUTO (Sweep advancing automatically)";
+    } else {
+        cout << "\033[33m";  // Yellow for MANUAL mode
+        cout << " MODE: MANUAL (Use LEFT/RIGHT arrows to control sweep)";
+    }
+    cout << "\033[0m\n";  // Reset color
+    
+    // Control reminder
+    cout << " Controls: SPACE=toggle mode | U=undo | +/-=speed | ESC=exit\n";
+    cout << "==============================================================\n";
     
     // Animation status bar
     string animBar = "[";
     int barLength = 20;
     int filled = (borderAnim % barLength);
     for (int i = 0; i < barLength; i++) {
-        if (i <= filled) animBar += "█";
-        else animBar += "░";
+        if (i <= filled) animBar += "=";
+        else animBar += ".";
     }
     animBar += "]";
     
-    cout << "║ Animation: " << animBar << " " << string(27, ' ') << "║\n";
-    cout << "╚══════════════════════════════════════════════════════════════╝\n";
-    cout << "\n";
+    // Show animation progress for auto mode
+    if (autoSweep) {
+        cout << " Auto Sweep Progress: " << animBar << "\n";
+    }
     
     // Draw HUD
     drawHUD(radar, targets);
     
-    // Display refresh queue messages
+    // Display refresh queue messages (firing solutions will appear here)
     while (!isRefreshQueueEmpty()) {
-        cout << dequeueRefresh() << "\n";
+        string msg = dequeueRefresh();
+        // Don't show "SWEEP ADVANCING" messages in manual mode
+        if (!autoSweep && msg.find("SWEEP ADVANCING") != string::npos) {
+            continue;
+        }
+        cout << msg << "\n";
     }
     
     // Update frame rate
     updateFrameRate();
     
-    // Display sweep advancement status
-    if (shouldAdvanceSweep()) {
+    // Only show sweep advancement message in auto mode
+    if (autoSweep && shouldAdvanceSweep()) {
         stringstream animMsg;
-        animMsg << "╔══════════════════════════════════════════════════════════════╗\n";
-        animMsg << "║               SWEEP ADVANCING - " 
-                << setw(6) << setprecision(1) << fixed << sweepSpeed << "°/sec              ║\n";
-        animMsg << "╚══════════════════════════════════════════════════════════════╝";
-        enqueueRefresh(animMsg.str());
+        animMsg << "==============================================================\n";
+        animMsg << "               AUTO SWEEP ADVANCING - " 
+                << setw(6) << setprecision(1) << fixed << sweepSpeed << " deg/sec            \n";
+        animMsg << "==============================================================";
+        cout << animMsg.str() << "\n";
     }
 }
 
@@ -579,38 +610,38 @@ void ConsoleUI::renderTargetInfo(const Target& target, const Radar& radar) {
     radar.analyzeTarget(target, horizontalDist, displacement, bearing, direction);
     
     info << fixed << setprecision(1);
-    info << "╔══════════════════════════════════════════════════════════════╗\n";
-    info << "║                     TARGET INFORMATION                       ║\n";
-    info << "╠══════════════════════════════════════════════════════════════╣\n";
+    info << "==============================================================\n";
+    info << "                     TARGET INFORMATION                       \n";
+    info << "--------------------------------------------------------------\n";
     
     string targetIdLine = "ID: " + target.getId() + 
                          " Type: " + (target.getType() == TargetType::UNKNOWN ? "UNKNOWN" : "FRIENDLY");
     int idPadding = 49 - targetIdLine.length();
-    info << "║ " << targetIdLine << string(max(0, idPadding), ' ') << "║\n";
+    info << " " << targetIdLine << string(max(0, idPadding), ' ') << "\n";
     
     string posLine = "Position: (" + to_string(static_cast<int>(target.getPosition().x)) + 
                      ", " + to_string(static_cast<int>(target.getPosition().y)) + 
                      ") Height: " + to_string(static_cast<int>(target.getHeight()));
     int posPadding = 49 - posLine.length();
-    info << "║ " << posLine << string(max(0, posPadding), ' ') << "║\n";
+    info << " " << posLine << string(max(0, posPadding), ' ') << "\n";
     
     string distLine = "Horizontal Distance: " + formatDouble(horizontalDist, 1) + 
                      " Displacement: " + formatDouble(displacement, 1);
     int distPadding = 49 - distLine.length();
-    info << "║ " << distLine << string(max(0, distPadding), ' ') << "║\n";
+    info << " " << distLine << string(max(0, distPadding), ' ') << "\n";
     
     string bearingLine = "Bearing: " + formatDouble(bearing, 1) + 
-                        "° Direction: " + direction;
+                        " deg Direction: " + direction;
     int bearingPadding = 49 - bearingLine.length();
-    info << "║ " << bearingLine << string(max(0, bearingPadding), ' ') << "║\n";
+    info << " " << bearingLine << string(max(0, bearingPadding), ' ') << "\n";
     
     string speedLine = "Speed: " + formatDouble(target.getSpeed(), 1) + 
                       " Velocity: (" + formatDouble(target.getVelocity().x, 1) + 
                       ", " + formatDouble(target.getVelocity().y, 1) + ")";
     int speedPadding = 49 - speedLine.length();
-    info << "║ " << speedLine << string(max(0, speedPadding), ' ') << "║\n";
+    info << " " << speedLine << string(max(0, speedPadding), ' ') << "\n";
     
-    info << "╚══════════════════════════════════════════════════════════════╝";
+    info << "==============================================================";
     
     enqueueRefresh(info.str());
 }
@@ -621,55 +652,57 @@ void ConsoleUI::renderFiringSolution(const Gun& gun, const Target& target) {
     
     stringstream ss;
     ss << fixed << setprecision(1);
-    ss << "╔══════════════════════════════════════════════════════════════╗\n";
-    ss << "║                     FIRING SOLUTION                          ║\n";
-    ss << "╠══════════════════════════════════════════════════════════════╣\n";
+    ss << "==============================================================\n";
+    ss << "                     FIRING SOLUTION                          \n";
+    ss << "--------------------------------------------------------------\n";
     
     string solutionLine = solution.solutionText;
     int solPadding = 49 - solutionLine.length();
-    ss << "║ " << solutionLine << string(max(0, solPadding), ' ') << "║\n";
+    ss << " " << solutionLine << string(max(0, solPadding), ' ') << "\n";
     
     string detailLine = "Elevation: " + formatDouble(solution.elevation, 1) + 
-                       "° Azimuth: " + formatDouble(solution.azimuth, 1) + 
-                       "° Distance: " + formatDouble(solution.distance, 1);
+                       " deg Azimuth: " + formatDouble(solution.azimuth, 1) + 
+                       " deg Distance: " + formatDouble(solution.distance, 1);
     int detailPadding = 49 - detailLine.length();
-    ss << "║ " << detailLine << string(max(0, detailPadding), ' ') << "║\n";
+    ss << " " << detailLine << string(max(0, detailPadding), ' ') << "\n";
     
-    ss << "╚══════════════════════════════════════════════════════════════╝";
+    ss << "==============================================================";
     
-    enqueueRefresh(ss.str());
+    // Add special color for firing solutions
+    string coloredMsg = "\033[31m" + ss.str() + "\033[0m";  // Red color for firing solutions
+    enqueueRefresh(coloredMsg);
 }
 
 void ConsoleUI::renderSystemStatus(const Radar& radar, int totalTargets, 
                                   int detectedTargets) {
     stringstream status;
     
-    status << "╔══════════════════════════════════════════════════════════════╗\n";
-    status << "║                     SYSTEM STATUS (Phase 6)                 ║\n";
-    status << "╠══════════════════════════════════════════════════════════════╣\n";
+    status << "==============================================================\n";
+    status << "                     SYSTEM STATUS (Phase 6)                 \n";
+    status << "--------------------------------------------------------------\n";
     
     string sweepLine = "Sweep Angle: " + formatDouble(radar.getCurrentSweepAngle(), 1) + 
-                      "° Speed: " + formatDouble(sweepSpeed, 1) + "°/sec";
+                      " deg Speed: " + formatDouble(sweepSpeed, 1) + " deg/sec";
     int sweepPadding = 49 - sweepLine.length();
-    status << "║ " << sweepLine << string(max(0, sweepPadding), ' ') << "║\n";
+    status << " " << sweepLine << string(max(0, sweepPadding), ' ') << "\n";
     
     string frameLine = "Frame Stack: " + to_string(stackSize) + 
                       "/" + to_string(MAX_FRAME_STACK) + 
                       " FPS: " + formatDouble(frameRate, 1);
     int framePadding = 49 - frameLine.length();
-    status << "║ " << frameLine << string(max(0, framePadding), ' ') << "║\n";
+    status << " " << frameLine << string(max(0, framePadding), ' ') << "\n";
     
     string targetLine = "Targets Tracked: " + to_string(detectedTargets) + 
                        "/" + to_string(totalTargets);
     int targetPadding = 49 - targetLine.length();
-    status << "║ " << targetLine << string(max(0, targetPadding), ' ') << "║\n";
+    status << " " << targetLine << string(max(0, targetPadding), ' ') << "\n";
     
     string stackInfo = "Stack Depth: " + to_string(stackSize) + 
                       " (Press 'U' to undo)";
     int stackPadding = 49 - stackInfo.length();
-    status << "║ " << stackInfo << string(max(0, stackPadding), ' ') << "║\n";
+    status << " " << stackInfo << string(max(0, stackPadding), ' ') << "\n";
     
-    status << "╚══════════════════════════════════════════════════════════════╝";
+    status << "==============================================================";
     
     enqueueRefresh(status.str());
 }

@@ -85,9 +85,10 @@ public:
     ConsoleUI();
     ~ConsoleUI();
     
-    // Main rendering methods
+    // Main rendering methods - UPDATED to include mode
     void renderRadarDisplay(const Radar& radar, 
-                           const std::vector<Target>& targets);
+                           const std::vector<Target>& targets,
+                           bool autoSweep = false);  // Added autoSweep parameter
     
     void renderTargetInfo(const Target& target, const Radar& radar);
     void renderFiringSolution(const Gun& gun, const Target& target);
@@ -116,6 +117,11 @@ public:
     
     // Utility for formatted output
     static std::string formatDouble(double value, int precision = 1);
+    
+    // Public interface for adding messages to refresh queue
+    void displayMessage(const std::string& message) {
+        enqueueRefresh(message);
+    }
 };
 
 // FrameNode constructor implementation

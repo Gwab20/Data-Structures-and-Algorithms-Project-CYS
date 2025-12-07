@@ -3,8 +3,18 @@
 #include <string>
 using namespace std;
 
+// Single, unified constructor
 Radar::Radar(const Vector2D& pos, double range) 
-    : position(pos), range(range), defenseGun(pos) {}
+    : position(pos), range(range), defenseGun(pos), 
+      queueFront(nullptr), queueRear(nullptr), queueSize(0),
+      sweepHead(nullptr), currentSweep(nullptr), sweepAngle(0.0),
+      currentDetectedCount(0) {
+    // Initialize detectedTargets array to null state
+    for (int i = 0; i < MAX_DETECTED_TARGETS; i++) {
+        detectedTargets[i] = Target(); // Assuming Target has default constructor
+    }
+    initializeSweep();
+}
 
 bool Radar::isInRange(const Target& target) const {
     return target.calculateHorizontalDistance(position) <= range;
@@ -19,15 +29,6 @@ void Radar::analyzeTarget(const Target& target,
     displacement = target.calculateDisplacement(position);
     bearing = target.calculateBearingFrom(position);
     direction = target.getCompassDirectionFrom(position);
-}
-
-// Constructor - initialize linked lists
-Radar::Radar(const Vector2D& pos, double range) 
-    : position(pos), range(range), defenseGun(pos), 
-      queueFront(nullptr), queueRear(nullptr), queueSize(0),
-      sweepHead(nullptr), currentSweep(nullptr), sweepAngle(0),
-      currentDetectedCount(0) {
-    initializeSweep();
 }
 
 // Destructor - clean up linked lists
@@ -82,11 +83,11 @@ DetectionEvent Radar::dequeueEvent() {
 }
 
 bool Radar::isQueueEmpty() const{
-    return queueFront ==nullptr;
+    return queueFront == nullptr;
 }
 
 bool Radar::isQueueFull() const {
-    return queueSize>=MAX_QUEUE_SIZE;
+    return queueSize >= MAX_QUEUE_SIZE;
 }
 
 void Radar::clearQueue() {
@@ -121,13 +122,17 @@ void Radar::initializeSweep() {
         prev->next = sweepHead;
     }
     currentSweep = sweepHead;
-    sweepAngle = currentSweep->angle;
+    if (currentSweep) {
+        sweepAngle = currentSweep->angle;
+    }
 }
 
 void Radar::advanceSweep() {
     if(currentSweep) {
-        currentSweep = currentSweep-> next;
-        sweepAngle = currentSweep->angle;
+        currentSweep = currentSweep->next;
+        if (currentSweep) {
+            sweepAngle = currentSweep->angle;
+        }
     }
 }
 
@@ -154,6 +159,7 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
             for (int j = i; j < currentDetectedCount - 1; j++) {
                 detectedTargets[j] = detectedTargets[j + 1];
             }
+            detectedTargets[currentDetectedCount - 1] = Target(); // Clear last element
             currentDetectedCount--;
             i--; // Adjust index after removal
         }
@@ -162,10 +168,10 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
     // Step 2: Check for new targets entering range
     for (int i = 0; i < targetCount; i++) {
         if (isInRange(allTargets[i])) {
-            // Linear search to check if already detected
+            // Linear search to check if already detected - compare by ID
             bool alreadyDetected = false;
             for (int j = 0; j < currentDetectedCount; j++) {
-                if (detectedTargets[j] == allTargets[i]) {
+                if (detectedTargets[j].getId() == allTargets[i].getId()) {
                     alreadyDetected = true;
                     break;
                 }
@@ -173,7 +179,8 @@ void Radar::updateDetections(Target* allTargets, int targetCount) {
             
             // If new detection, add to detected targets and create ENTER event
             if (!alreadyDetected && currentDetectedCount < MAX_DETECTED_TARGETS) {
-                detectedTargets[currentDetectedCount++] = allTargets[i];
+                detectedTargets[currentDetectedCount] = allTargets[i];
+                currentDetectedCount++;
                 
                 DetectionEvent enterEvent;
                 enterEvent.targetId = allTargets[i].getId();
@@ -207,6 +214,6 @@ void Radar::printDetectionEvents() {
     }
     cout << endl;
     
-    // Clear events after printing (or keep them based on your needs)
+    // Optional: Clear events after printing
     // clearQueue(); // Uncomment if you want to clear after printing
 }
