@@ -3,6 +3,7 @@
 
 #include "../radar/Radar.hpp"
 #include "../radar/Target.hpp"
+#include "../ui/MouseInput.hpp"
 #include <vector>
 #include <string>
 #include <chrono>
@@ -46,36 +47,52 @@ private:
     int frameCount; // frame counter
     double sweepSpeed;  // Degrees per second
     
+    // ========== PHASE 7: MOUSE CONTROL ADDITIONS ==========
+    MouseInput mouseInput;
+    bool mouseControlEnabled;
+    std::string mouseControlledTargetId;
+    int mouseCursorX, mouseCursorY;
+    bool showMouseCursor;
+    // ========== END PHASE 7 ADDITIONS ==========
+    
     // Colors for different target types
     enum Color {
         COLOR_UNKNOWN = 1,
         COLOR_FRIENDLY = 2,
         COLOR_RADAR = 3,
         COLOR_SWEEP = 4,
-        COLOR_INFO = 5
+        COLOR_INFO = 5,
+        COLOR_MOUSE = 6
     };
     
     // Helper methods
-    void initColors(); // setup terminal colors
-    void clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]); //empty grid
+    void initColors();
+    void clearGrid(char grid[GRID_HEIGHT][GRID_WIDTH]);
     void copyGrid(char dest[GRID_HEIGHT][GRID_WIDTH], const char src[GRID_HEIGHT][GRID_WIDTH]); 
     void drawRadarCircle(char grid[GRID_HEIGHT][GRID_WIDTH]);
-    void drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]); // draw N,E,S,W labels
+    void drawCompass(char grid[GRID_HEIGHT][GRID_WIDTH]);
     void drawSweepLine(char grid[GRID_HEIGHT][GRID_WIDTH], double angle, const Radar& radar);
     void drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const std::vector<Target>& targets, const Radar& radar);
     void drawHUD(const Radar& radar, const std::vector<Target>& targets);
     
+    // ========== PHASE 7: MOUSE METHODS ==========
+    void drawMouseCursor(char grid[GRID_HEIGHT][GRID_WIDTH], const Radar& radar);
+    void updateMouseControl(std::vector<Target>& targets, const Radar& radar);
+    Vector2D getMouseWorldPosition(const Radar& radar) const;
+    void handleMouseEvents();
+    // ========== END PHASE 7 METHODS ==========
+    
     // Manual stack operations
-    void pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle); // save frame
-    bool popFrame(); //remove frame
+    void pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle);
+    bool popFrame();
     FrameNode* peekFrame() const;
-    void clearStack(); // empty stack
+    void clearStack();
     
     // Queue operations for screen refresh
-    void enqueueRefresh(const std::string& message); // add message
-    std::string dequeueRefresh(); // get message
-    bool isRefreshQueueEmpty() const; // any messages?
-    bool isRefreshQueueFull() const; // Queue full?
+    void enqueueRefresh(const std::string& message);
+    std::string dequeueRefresh();
+    bool isRefreshQueueEmpty() const;
+    bool isRefreshQueueFull() const;
     
     // Coordinate mapping
     void worldToGrid(const Vector2D& worldPos, const Radar& radar, 
@@ -85,10 +102,10 @@ public:
     ConsoleUI();
     ~ConsoleUI();
     
-    // Main rendering methods - UPDATED to include mode
+    // Main rendering methods
     void renderRadarDisplay(const Radar& radar, 
-                           const std::vector<Target>& targets,
-                           bool autoSweep = false);  // Added autoSweep parameter
+                           std::vector<Target>& targets,
+                           bool autoSweep = false);
     
     void renderTargetInfo(const Target& target, const Radar& radar);
     void renderFiringSolution(const Gun& gun, const Target& target);
@@ -100,19 +117,47 @@ public:
     void setSweepSpeed(double degreesPerSec) { sweepSpeed = degreesPerSec; }
     double getSweepSpeed() const { return sweepSpeed; }
     
-    // Manual stack operations (public interface)
+    // Manual stack operations
     bool undoLastFrame();
-    bool canUndo() const { return stackSize > 1; }  // Need at least 2 frames to undo
+    bool canUndo() const { return stackSize > 1; }
     int getStackSize() const { return stackSize; }
     
     // Update methods
     void updateFrameRate();
     double getFrameRate() const { return frameRate; }
     
-    // Clear screen (platform independent)
+    // ========== PHASE 7: MOUSE CONTROL PUBLIC INTERFACE ==========
+    bool isMouseControlEnabled() const { return mouseControlEnabled; }
+    void toggleMouseControl(bool enable) { 
+        mouseControlEnabled = enable; 
+        if (enable) {
+            enqueueRefresh("=== MOUSE CONTROL ENABLED ===");
+            enqueueRefresh("Mouse cursor: M | Arrow keys move cursor");
+        } else {
+            enqueueRefresh("Mouse control disabled");
+        }
+    }
+    
+    void moveMouseCursor(int deltaX, int deltaY) {
+        mouseCursorX += deltaX;
+        mouseCursorY += deltaY;
+        
+        // Clamp to grid bounds
+        mouseCursorX = std::max(0, std::min(GRID_WIDTH - 1, mouseCursorX));
+        mouseCursorY = std::max(0, std::min(GRID_HEIGHT - 1, mouseCursorY));
+    }
+    
+    void setMouseClick(bool clicked) {
+        if (clicked && !mouseControlEnabled) {
+            toggleMouseControl(true);
+        }
+    }
+    // ========== END PHASE 7 PUBLIC INTERFACE ==========
+    
+    // Clear screen
     static void clearScreen();
     
-    // Set cursor position for terminal output
+    // Set cursor position
     static void setCursorPosition(int x, int y);
     
     // Utility for formatted output

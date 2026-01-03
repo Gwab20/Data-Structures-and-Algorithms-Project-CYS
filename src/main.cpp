@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <conio.h>
 #include <sstream>
+#include <ctime>
 #include "../include/radar/Radar.hpp"
 #include "../include/ui/ConsoleUI.hpp"
 
@@ -41,20 +42,28 @@ public:
 // Setup Windows console for colors and UTF8
 void setupConsoleUTF8() {
     #ifdef _WIN32
-        SetConsoleOutputCP(CP_UTF8); // Enable UTF8
+        SetConsoleOutputCP(CP_UTF8);
         SetConsoleCP(CP_UTF8);
         
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD dwMode = 0;
         GetConsoleMode(hOut, &dwMode);
-        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING; // Enable colors
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
         SetConsoleMode(hOut, dwMode);
+        
+        // ========== PHASE 7: ENABLE MOUSE INPUT ==========
+        HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+        GetConsoleMode(hIn, &dwMode);
+        dwMode |= ENABLE_MOUSE_INPUT;
+        dwMode &= ~ENABLE_QUICK_EDIT_MODE;
+        SetConsoleMode(hIn, dwMode);
+        // ========== END PHASE 7 ==========
     #endif
 }
 
 // Show fancy controls screen
 void clearScreen() {
-    cout << "\033[2J\033[1;1H"; // ANSI clear + home
+    cout << "\033[2J\033[1;1H";
 }
 
 void displayControls() {
@@ -75,17 +84,23 @@ void displayControls() {
     cout << "║  SPACE      - Advance one frame                              ║\n";
     cout << "║  ← / →      - Move sweep line                                ║\n";
     cout << "║  A          - Switch to AUTO mode                            ║\n";
+    cout << "║  C          - Toggle MOUSE control                           ║\n";
+    cout << "║  (With mouse control enabled)                                ║\n";
+    cout << "║  ARROWS     - Move mouse cursor                              ║\n";
+    cout << "║  SPACE      - Create mouse-controlled target                 ║\n";
     cout << "║                                                              ║\n";
     cout << "║  [AUTO MODE]                                                 ║\n";
     cout << "║  + / =      - Increase sweep speed                           ║\n";
     cout << "║  - / _      - Decrease sweep speed                           ║\n";
     cout << "║  M          - Switch to MANUAL mode                          ║\n";
+    cout << "║  C          - Toggle MOUSE control                           ║\n";
     cout << "║                                                              ║\n";
     cout << "║  [COMMON]                                                    ║\n";
     cout << "║  U          - Undo last frame                                ║\n";
     cout << "║  ESC        - Exit simulation                                ║\n";
     cout << "╠══════════════════════════════════════════════════════════════╣\n";
     cout << "║  LEGEND: X=Unknown/Enemy  F=Friendly  ╱╲│=Sweep Line         ║\n";
+    cout << "║          O=Mouse-Controlled Target  M=Mouse Cursor           ║\n";    
     cout << "╚══════════════════════════════════════════════════════════════╝\n\n";
     
     cout << "Press ENTER to begin simulation... ";
@@ -98,9 +113,8 @@ vector<Target> generateRandomTargets(int count, double range, RandomGenerator& r
     for (int i = 0; i < count; i++) {
         double x = rng.getRandomDouble(-range * 1.2, range * 1.2);
         double y = rng.getRandomDouble(-range * 1.2, range * 1.2);
-        double height = rng.getRandomDouble(300.0, 2000.0); // flying high
+        double height = rng.getRandomDouble(300.0, 2000.0);
         
-        // 60% chance tp be enemy, 40% friendly
         TargetType type = rng.getRandomBool(0.6) ? TargetType::UNKNOWN : TargetType::FRIENDLY;
         
         string id = "TGT-" + to_string(1000 + i);
@@ -110,20 +124,24 @@ vector<Target> generateRandomTargets(int count, double range, RandomGenerator& r
     return targets;
 }
 
-// Move targets around realistically
-void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGenerator& rng) {
+// Move targets around realistically (EXCLUDING mouse-controlled target)
+void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGenerator& rng, 
+                          const string& excludeTargetId = "") {
     static double currentTime = 0.0;
     
     for (auto& target : targets) {
-        // Add some realistic movement patterns
+        // Skip mouse-controlled target
+        if (target.getId() == excludeTargetId) {
+            continue;
+        }
+        
         static map<string, Vector2D> movementPatterns;
         string id = target.getId();
         
         if (movementPatterns.find(id) == movementPatterns.end()) {
-            // Create unique movement pattern for each target
             movementPatterns[id] = Vector2D(
-                rng.getRandomDouble(-3.0, 3.0),  // X speed
-                rng.getRandomDouble(-3.0, 3.0)    // Y speed
+                rng.getRandomDouble(-3.0, 3.0),
+                rng.getRandomDouble(-3.0, 3.0)
             );
         }
         
@@ -131,15 +149,14 @@ void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGener
         newPos.x += movementPatterns[id].x;
         newPos.y += movementPatterns[id].y;
         
-        // Keep targets within reasonable bounds
         const double maxBound = 1500.0;
         if (abs(newPos.x) > maxBound) {
             newPos.x = maxBound * (newPos.x > 0 ? 0.9 : -0.9);
-            movementPatterns[id].x *= -1; // Bounce off boundary
+            movementPatterns[id].x *= -1;
         }
         if (abs(newPos.y) > maxBound) {
             newPos.y = maxBound * (newPos.y > 0 ? 0.9 : -0.9);
-            movementPatterns[id].y *= -1; // Bounce off boundary
+            movementPatterns[id].y *= -1;
         }
         
         currentTime += timeStep;
@@ -147,7 +164,7 @@ void updateTargetPositions(vector<Target>& targets, double timeStep, RandomGener
     }
 }
 
-// Keyboard functions for Windows
+// Keyboard functions
 char waitForKey() {
     return _getch();
 }
@@ -156,65 +173,75 @@ bool keyAvailable() {
     return _kbhit() != 0;
 }
 
-// Pretty headers for different sections
-void printStatusHeader(bool autoMode, double sweepSpeed, int frameCount) {
-    cout << "\033[36m"; // Cyan color
+// Pretty headers
+void printStatusHeader(bool autoMode, double sweepSpeed, int frameCount, bool mouseControl) {
+    cout << "\033[36m";
     
     if (autoMode) {
         cout << "┌─[AUTO]────────────────────────────────────────────────────────┐\n";
         cout << "│ Sweep: " << setw(5) << fixed << setprecision(1) << sweepSpeed 
              << "°/sec │ Frame: " << setw(6) << frameCount 
-             << " │ Press 'M' for Manual │\n";
+             << " │ 'M'=Manual";
+        if (mouseControl) cout << " │ MOUSE=ON";
+        cout << " │\n";
     } else {
         cout << "┌─[MANUAL]──────────────────────────────────────────────────────┐\n";
         cout << "│ Frame: " << setw(6) << frameCount 
-             << " │ SPACE=Next │ ←/→=Sweep │ 'A'=Auto │\n";
+             << " │ SPACE=Next │ ←/→=Sweep │ 'A'=Auto";
+        if (mouseControl) cout << " │ MOUSE=ON";
+        cout << " │\n";
     }
     cout << "└──────────────────────────────────────────────────────────────┘\033[0m\n";
 }
 
 void printFiringSolutionHeader() {
-    cout << "\033[31m"; // Red color
+    cout << "\033[31m";
     cout << "┌─────────────────────[ FIRING SOLUTIONS ]───────────────────────┐\033[0m\n";
 }
 
 void printTargetInfoHeader() {
-    cout << "\033[33m"; // Yellow color
+    cout << "\033[33m";
     cout << "┌──────────────────────[ TARGET INFO ]─────────────────────────┐\033[0m\n";
 }
 
 void printSeparator() {
-    cout << "\033[90m"; // Gray color
+    cout << "\033[90m";
     cout << "├────────────────────────────────────────────────────────────────┤\033[0m\n";
 }
 
 void printFooter() {
-    cout << "\033[90m"; // Gray color
+    cout << "\033[90m";
     cout << "└────────────────────────────────────────────────────────────────┘\033[0m\n";
+}
+
+// Find mouse-controlled target
+Target* findMouseTarget(vector<Target>& targets, const string& mouseTargetId) {
+    for (auto& target : targets) {
+        if (target.getId() == mouseTargetId) {
+            return &target;
+        }
+    }
+    return nullptr;
 }
 
 // main simulation loop
 void runRadarSimulation() {
     RandomGenerator rng;
-    Radar radar(Vector2D(0, 0), 1000.0); // Radar at center, 1000m range
+    Radar radar(Vector2D(0, 0), 1000.0);
     ConsoleUI ui;
     
-    // Set initial sweep speed
     ui.setSweepSpeed(45.0);
     
-    // Generate targets
     vector<Target> targets = generateRandomTargets(8, radar.getRange(), rng);
     
     int frameCount = 0;
     bool running = true;
-    bool autoMode = false; // Start in MANUAL mode
+    bool autoMode = false;
     
-    // Track which targets we've shown solutions for
     map<string, int> targetSolutionCount;
     
     clearScreen();
     
-    // Initial display
     cout << "\033[36m";
     cout << "╔══════════════════════════════════════════════════════════════╗\n";
     cout << "║              RADAR SYSTEM INITIALIZED - READY                ║\n";
@@ -222,61 +249,76 @@ void runRadarSimulation() {
     cout << "\nStarting in MANUAL frame-by-frame mode...\n";
     cout << "Press SPACE for first frame\n";
     
-    // Wait for first key
     char startKey = waitForKey();
-    if (startKey == 27) return; //ESC
+    if (startKey == 27) return;
     
     // Main simulation loop
     while (running) {
         clearScreen();
         
-        // Print status header
-        printStatusHeader(autoMode, ui.getSweepSpeed(), frameCount);
+        printStatusHeader(autoMode, ui.getSweepSpeed(), frameCount, ui.isMouseControlEnabled());
         cout << "\n";
         
         // ========== INPUT HANDLING ==========
         char key = 0;
         
         if (!autoMode) {
-            // Manual mode - wait for key press
             cout << "\033[33m[MANUAL MODE - Press key for next frame]\033[0m\n";
-            cout << "SPACE:Next │ ←/→:Sweep │ A:Auto │ ESC:Exit\n\n";
+            cout << "SPACE:Next │ ←/→:Sweep │ A:Auto │ C:Mouse │ ESC:Exit\n\n";
             
             key = waitForKey();
             
             if (key == 27) { running = false; break; }
             if (key == 'a' || key == 'A') { autoMode = true; }
+            if (key == 'c' || key == 'C') { 
+                ui.toggleMouseControl(!ui.isMouseControlEnabled());
+            }
             if (key == 'u' || key == 'U') { ui.undoLastFrame(); }
             
-            // Handle arrow keys
+            // Handle arrow keys for mouse control or sweep control
             if (key == 0 || key == 224) {
                 int arrowKey = _getch();
-                if (arrowKey == 75) {  // LEFT
-                    radar.advanceSweep();
-                    ui.displayMessage("Sweep: LEFT");
-                }
-                else if (arrowKey == 77) {  // RIGHT
-                    radar.advanceSweep();
-                    ui.displayMessage("Sweep: RIGHT");
+                
+                if (ui.isMouseControlEnabled()) {
+                    // Arrow keys control mouse cursor
+                    switch(arrowKey) {
+                        case 72: ui.moveMouseCursor(0, -2); break; // Up
+                        case 80: ui.moveMouseCursor(0, 2); break;  // Down
+                        case 75: ui.moveMouseCursor(-2, 0); break; // Left
+                        case 77: ui.moveMouseCursor(2, 0); break;  // Right
+                    }
+                } else {
+                    // Arrow keys control sweep
+                    if (arrowKey == 75) {
+                        radar.advanceSweep();
+                        ui.displayMessage("Sweep: LEFT");
+                    }
+                    else if (arrowKey == 77) {
+                        radar.advanceSweep();
+                        ui.displayMessage("Sweep: RIGHT");
+                    }
                 }
             }
             
             // Only advance frame if valid key was pressed
-            if (key != 'a' && key != 'A' && key != 'u' && key != 'U') {
+            if (key != 'a' && key != 'A' && key != 'c' && key != 'C' && 
+                key != 'u' && key != 'U') {
                 frameCount++;
             } else if (key == 'a' || key == 'A') {
-                continue; // Skip to next iteration after mode change
+                continue;
             }
         } else {
-            // Auto mode - check for keys without blocking
+            // Auto mode
             if (keyAvailable()) {
                 key = _getch();
                 
                 if (key == 27) { running = false; break; }
                 if (key == 'm' || key == 'M') { autoMode = false; }
+                if (key == 'c' || key == 'C') { 
+                    ui.toggleMouseControl(!ui.isMouseControlEnabled());
+                }
                 if (key == 'u' || key == 'U') { ui.undoLastFrame(); }
                 
-                // Speed controls
                 if (key == '+' || key == '=') {
                     ui.setSweepSpeed(ui.getSweepSpeed() + 15.0);
                     ui.displayMessage("Speed: +15°/sec");
@@ -289,20 +331,20 @@ void runRadarSimulation() {
                 }
             }
             
-            // Auto advance sweep
             if (ui.shouldAdvanceSweep()) {
                 radar.advanceSweep();
             }
             
             frameCount++;
-            this_thread::sleep_for(chrono::milliseconds(40)); // ~25 FPS
+            this_thread::sleep_for(chrono::milliseconds(40));
         }
         
         // ========== SIMULATION UPDATES ==========
-        updateTargetPositions(targets, 0.1, rng);
+        updateTargetPositions(targets, 0.1, rng, "");
         radar.updateDetections(targets.data(), static_cast<int>(targets.size()));
         
         // ========== RENDER RADAR DISPLAY ==========
+        // Note: targets passed by reference for mouse control
         ui.renderRadarDisplay(radar, targets, autoMode);
         cout << "\n";
         
@@ -326,14 +368,13 @@ void runRadarSimulation() {
         if (!unknownTargets.empty()) {
             printFiringSolutionHeader();
             
-            // Show solutions for up to 3 unknown targets
             int solutionsShown = 0;
             for (auto targetPtr : unknownTargets) {
                 if (solutionsShown >= 3) break;
                 
                 FiringSolution solution = radar.getDefenseGun().calculateFiringSolution(*targetPtr);
                 
-                cout << "\033[97m"; // Bright white
+                cout << "\033[97m";
                 cout << "│ " << targetPtr->getId() << " │ ";
                 cout << "Az: " << setw(6) << fixed << setprecision(1) << solution.azimuth << "° │ ";
                 cout << "El: " << setw(5) << solution.elevation << "° │ ";
@@ -341,8 +382,6 @@ void runRadarSimulation() {
                 cout << solution.direction << "\033[0m\n";
                 
                 solutionsShown++;
-                
-                // Track how many times we've shown this target
                 targetSolutionCount[targetPtr->getId()]++;
             }
             printFooter();
@@ -353,7 +392,6 @@ void runRadarSimulation() {
         if (inRangeCount > 0 && frameCount % 8 == 0) {
             printTargetInfoHeader();
             
-            // Show info for first target in range
             for (auto& target : targets) {
                 if (radar.isInRange(target)) {
                     double dist = target.calculateHorizontalDistance(radar.getPosition());
@@ -361,7 +399,7 @@ void runRadarSimulation() {
                     string dir = target.getCompassDirectionFrom(radar.getPosition());
                     double speed = target.getSpeed();
                     
-                    cout << "\033[97m"; // Bright white
+                    cout << "\033[97m";
                     cout << "│ " << target.getId() << " │ ";
                     cout << "Type: " << (target.getType() == TargetType::UNKNOWN ? "HOSTILE " : "FRIENDLY") << " │ ";
                     cout << "Range: " << setw(6) << fixed << setprecision(1) << dist << "m │ ";
@@ -369,7 +407,7 @@ void runRadarSimulation() {
                     cout << "Spd: " << setw(5) << speed << "m/s │ ";
                     cout << dir << "\033[0m\n";
                     
-                    break; // Only show first target
+                    break;
                 }
             }
             printFooter();
@@ -381,12 +419,18 @@ void runRadarSimulation() {
         cout << "\033[36m";
         cout << "│ Targets: " << setw(2) << inRangeCount << "/" << targets.size() 
              << " in range │ Unknown: " << unknownTargets.size() 
-             << " │ Friendly: " << friendlyTargets.size() 
-             << " │ Sweep: " << setw(5) << fixed << setprecision(1) 
+             << " │ Friendly: " << friendlyTargets.size();
+        
+        if (ui.isMouseControlEnabled()) {
+            cout << " │ 🖱️:ON";
+        } else {
+            cout << " │ 🖱️:OFF";
+        }
+        
+        cout << " │ Sweep: " << setw(5) << fixed << setprecision(1) 
              << radar.getCurrentSweepAngle() << "° │\033[0m\n";
         printFooter();
         
-        // ========== MODE SPECIFIC MESSAGES ==========
         if (!autoMode) {
             cout << "\n\033[90m" << "Waiting for next command..." << "\033[0m\n";
         } else {
@@ -395,7 +439,6 @@ void runRadarSimulation() {
                  << "°/sec)" << "\033[0m\n";
         }
         
-        // Brief pause for readability in auto mode
         if (autoMode) {
             this_thread::sleep_for(chrono::milliseconds(100));
         }
@@ -411,6 +454,7 @@ void runRadarSimulation() {
     cout << "║  Statistics:                                                 ║\n";
     cout << "║  • Total Frames: " << setw(8) << frameCount << "                                    ║\n";
     cout << "║  • Final Mode:   " << (autoMode ? "AUTO              " : "MANUAL            ") << "                          ║\n";
+    cout << "║  • Mouse Control: " << (ui.isMouseControlEnabled() ? "ACTIVE           " : "INACTIVE          ") << "                        ║\n";
     cout << "║  • Targets Tracked: " << setw(4) << targets.size() << "                                      ║\n";
     cout << "║                                                              ║\n";
     cout << "╚══════════════════════════════════════════════════════════════╝\033[0m\n\n";
@@ -424,7 +468,6 @@ int main() {
     
     displayControls();
     
-    // Wait for Enter
     while (true) {
         if (_kbhit()) {
             int key = _getch();
