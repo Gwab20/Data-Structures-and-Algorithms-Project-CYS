@@ -1,16 +1,3 @@
-// GuiMain.cpp  —  AN/TPY-2 Air Defense Radar  (Phases 1-11)
-//
-// Build (Windows, from project root):
-//   g++ -std=c++14 -I./include -I./gui -I./gui/imgui -I./gui/imgui/backends
-//       src/radar/Radar.cpp src/radar/Target.cpp src/radar/Gun.cpp
-//       src/utils/MathUtils.cpp gui/GuiMain.cpp gui/RadarWidget.cpp gui/HudPanel.cpp
-//       gui/imgui/imgui.cpp gui/imgui/imgui_draw.cpp gui/imgui/imgui_tables.cpp
-//       gui/imgui/imgui_widgets.cpp gui/imgui/imgui_demo.cpp
-//       gui/imgui/backends/imgui_impl_glfw.cpp
-//       gui/imgui/backends/imgui_impl_opengl3.cpp
-//       -o build/radar_gui.exe
-//       -L./gui/glfw/lib-mingw-w64 -lglfw3 -lopengl32 -lgdi32 -luser32 -mwindows
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -38,7 +25,7 @@ using namespace std;
 #define M_PI 3.14159265358979323846
 #endif
 
-// ── Shared state ─────────────────────────────────────────────
+//  Shared state 
 bool g_simPaused = false;    // written by HudPanel Controls tab
 
 // Engagement / kill tracking
@@ -67,7 +54,7 @@ static double rnd(double a,double b){
     return a+uniform_real_distribution<double>(0,1)(g_rng)*(b-a);
 }
 
-// ── Spawn ─────────────────────────────────────────────────────
+// Spawn
 static void spawnN(int n){
     double R=g_radar->getRange();
     for(int i=0;i<n;i++){
@@ -81,7 +68,7 @@ static void spawnN(int n){
     }
 }
 
-// ── Per-frame movement ────────────────────────────────────────
+// Per-frame movement 
 static void moveTgts(double /*dt*/){
     if(g_simPaused) return;
     const double B=1700.;
@@ -99,7 +86,7 @@ static void moveTgts(double /*dt*/){
     g_time+=0.016;   // fixed 60fps-equivalent time step
 }
 
-// ── Mouse → world ─────────────────────────────────────────────
+// Mouse → world 
 // Must match RadarWidget geometry exactly.
 // RadarWidget uses: header=26, footer=22, radius=min(cW,cH)*0.42
 static ImVec2 g_scopeMin={0,0}, g_scopeSz={500,500};
@@ -127,7 +114,7 @@ static void updateMouseTgt(){
 
 static void glfwErr(int e,const char*d){fprintf(stderr,"GLFW %d: %s\n",e,d);}
 
-// ── Apply theme ───────────────────────────────────────────────
+// Apply theme 
 static void applyTheme(){
     ImGui::StyleColorsDark();
     ImGuiStyle&S=ImGui::GetStyle();
@@ -182,7 +169,7 @@ static void applyTheme(){
     C[ImGuiCol_PlotHistogram]        ={0.16f,0.65f,0.16f,1.f};
 }
 
-// ── Main ──────────────────────────────────────────────────────
+// Main 
 int main(){
     Radar radar(Vector2D(0,0),1000.);
     vector<Target> targets;
@@ -224,7 +211,7 @@ int main(){
         glfwPollEvents();
         double now=glfwGetTime(), dt=now-lastT; lastT=now;
 
-        // ── Simulation tick ───────────────────────────────────
+        // Simulation tick 
         moveTgts(dt);
         if(!g_simPaused){
             g_sweepT+=dt;
@@ -232,7 +219,7 @@ int main(){
         }
         radar.updateDetections(targets.data(),(int)targets.size());
 
-        // ── Engagement countdown & kill ───────────────────────
+        //Engagement countdown & kill 
         if(radar.isEngaged() && g_engageTimer < 0.0){
             // Engagement just started — begin countdown
             g_engageTimer = ENGAGE_FLIGHT;
@@ -265,14 +252,14 @@ int main(){
         // If engagement was aborted externally, reset timer
         if(!radar.isEngaged()) g_engageTimer = -1.0;
 
-        // ── Age / remove expired explosions ───────────────────
+        // Age / remove expired explosions 
         for(auto&ex:g_explosions) ex.age += (float)dt;
         g_explosions.erase(
             remove_if(g_explosions.begin(),g_explosions.end(),
                 [](const Explosion&e){return e.age>=e.maxAge;}),
             g_explosions.end());
 
-        // ── Detection log (refresh every 0.5s) ───────────────
+        // Detection log (refresh every 0.5s) 
         logTimer+=dt;
         if(logTimer>0.5){
             logTimer=0.; logN=0;
@@ -286,14 +273,14 @@ int main(){
             }
         }
 
-        // ── ImGui frame ───────────────────────────────────────
+        // ImGui frame 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         int wW,wH; glfwGetFramebufferSize(win,&wW,&wH);
 
-        // ── Root fullscreen window ────────────────────────────
+        // Root fullscreen window 
         ImGui::SetNextWindowPos({0,0});
         ImGui::SetNextWindowSize({(float)wW,(float)wH});
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,{0,0});
@@ -310,7 +297,7 @@ int main(){
         float bodyH=(float)wH-TH-BH;
         float bodyW=(float)wW;
 
-        // ── TOP BAR ──────────────────────────────────────────
+        // TOP BAR 
         rdl->AddRectFilled({0,0},{(float)wW,TH},IM_COL32(2,9,2,255));
         rdl->AddRectFilled({0,0},{4,TH},         IM_COL32(0,200,58,255));
         rdl->AddLine({0,TH},{(float)wW,TH},      IM_COL32(0,88,0,230),1.5f);
@@ -345,21 +332,6 @@ int main(){
             ImGui::TextColored({1.f,.85f,.10f,1.f},"%s",ps);
         }
 
-        // ── LAYOUT ───────────────────────────────────────────
-        //
-        //   +-------------------+------------------+
-        //   |                   |   RADAR SCOPE    |
-        //   |   LEFT PANEL      |   (square)       |
-        //   |   (Track Info /   +------------------+
-        //   |    Controls)      | FIRE CTRL/THREAT |
-        //   |                   |   (tabs)         |
-        //   +-------------------+------------------+
-        //
-        // Left column: 440px wide, full body height
-        // Right column: fills remaining width
-        //   Right-top: square radar scope
-        //   Right-bottom: fire control / threat tabs
-
         const float LP   = 6.f;          // layout padding
         const float GAP  = 5.f;          // gap between columns / rows
         const float LW   = 440.f;        // left panel width
@@ -376,7 +348,7 @@ int main(){
         renderFireControl(radar,targets);
         ImGui::EndChild();
 
-        // ── RIGHT TOP — RADAR SCOPE ───────────────────────────
+        //RIGHT TOP — RADAR SCOPE 
         float rxStart = LP + LW + GAP;
         ImGui::SetCursorPos({rxStart, TH+LP});
         ImGui::BeginChild("ScopePanel",{RW, scopeH}, true,
@@ -391,7 +363,7 @@ int main(){
 
         ImGui::EndChild();
 
-        // ── RIGHT BOTTOM — Track Info / Controls / Threat ─────
+        //RIGHT BOTTOM — Track Info / Controls / Threat
         ImGui::SetCursorPos({rxStart, TH+LP+scopeH+GAP});
         ImGui::BeginChild("BtmPanel",{RW, btmH-LP}, true,
                           ImGuiWindowFlags_None);
@@ -446,7 +418,7 @@ int main(){
 
         ImGui::EndChild();
 
-        // ── BOTTOM STATUS BAR ─────────────────────────────────
+        // BOTTOM STATUS BAR
         float by=(float)wH-BH;
         rdl->AddRectFilled({0,by},{(float)wW,(float)wH},IM_COL32(1,7,1,255));
         rdl->AddLine({0,by},{(float)wW,by},IM_COL32(0,65,0,200),1.f);
@@ -457,7 +429,7 @@ int main(){
 
         ImGui::End();
 
-        // ── Render ────────────────────────────────────────────
+        //Render
         ImGui::Render();
         glViewport(0,0,wW,wH);
         glClearColor(.03f,.05f,.03f,1.f);

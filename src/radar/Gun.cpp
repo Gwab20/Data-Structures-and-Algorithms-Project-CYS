@@ -95,9 +95,6 @@ FiringSolution Gun::calculateFiringSolution(const Target& target) const {
                                                 solution.azimuth, 
                                                 solution.direction);
     
-    // Note: We can't store in history because this method is now const
-    // storeSolution(solution); // REMOVED - history storage requires non-const
-    
     return solution;
 }
 

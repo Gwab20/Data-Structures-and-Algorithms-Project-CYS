@@ -5,14 +5,10 @@
 #include "Target.hpp"
 #include "Gun.hpp"
 #include <vector>
-#include <unordered_map>   // Phase 8: IFF hash table
+#include <unordered_map>  
 #include <string>
 using namespace std;
 
-// ============================================================
-//  Radar  -  detects targets, tracks kinematics, controls gun
-//  Phase 8: IFF via unordered_map (O(1) friend/foe lookup)
-// ============================================================
 class Radar {
 private:
     Vector2D position;

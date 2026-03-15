@@ -4,11 +4,7 @@
 #include <string>
 using namespace std;
 
-// ============================================================
 //  Radar implementation
-//  Phases 1-9 complete: detection, queue, sweep, IFF, engagement
-// ============================================================
-
 Radar::Radar(const Vector2D& pos, double range)
     : position(pos), range(range), defenseGun(pos),
       queueFront(nullptr), queueRear(nullptr), queueSize(0),
@@ -35,7 +31,7 @@ Radar::~Radar() {
     }
 }
 
-// ── Range check ──────────────────────────────────────────────
+//  Range check 
 bool Radar::isInRange(const Target& target) const {
     return target.calculateHorizontalDistance(position) <= range;
 }
@@ -52,7 +48,7 @@ void Radar::analyzeTarget(const Target& target,
     direction      = target.getCompassDirectionFrom(position);
 }
 
-// ── Queue ─────────────────────────────────────────────────────
+//  Queue 
 void Radar::enqueueEvent(const DetectionEvent& event) {
     if (isQueueFull()) dequeueEvent();     // drop oldest if full
 
@@ -85,7 +81,7 @@ void Radar::clearQueue() {
     while (!isQueueEmpty()) dequeueEvent();
 }
 
-// ── Circular linked list sweep ────────────────────────────────
+//  Circular linked list sweep 
 void Radar::initializeSweep() {
     const int numDirections = 16;   // 0°, 22.5°, …, 337.5°
     SweepNode* prev = nullptr;
@@ -114,7 +110,7 @@ void Radar::advanceSweep() {
 
 double Radar::getCurrentSweepAngle() const { return sweepAngle; }
 
-// ── Detection system ──────────────────────────────────────────
+//  Detection system 
 void Radar::updateDetections(Target* allTargets, int targetCount) {
     advanceSweep();
 

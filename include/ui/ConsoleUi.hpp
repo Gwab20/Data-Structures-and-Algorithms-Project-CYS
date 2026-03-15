@@ -47,13 +47,13 @@ private:
     int frameCount; // frame counter
     double sweepSpeed;  // Degrees per second
     
-    // ========== PHASE 7: MOUSE CONTROL ADDITIONS ==========
+// PHASE 7: MOUSE CONTROL ADDITIONS 
     MouseInput mouseInput;
     bool mouseControlEnabled;
     std::string mouseControlledTargetId;
     int mouseCursorX, mouseCursorY;
     bool showMouseCursor;
-    // ========== END PHASE 7 ADDITIONS ==========
+    // END PHASE 7 ADDITIONS
     
     // Colors for different target types
     enum Color {
@@ -75,12 +75,12 @@ private:
     void drawTargets(char grid[GRID_HEIGHT][GRID_WIDTH], const std::vector<Target>& targets, const Radar& radar);
     void drawHUD(const Radar& radar, const std::vector<Target>& targets);
     
-    // ========== PHASE 7: MOUSE METHODS ==========
+    //  PHASE 7: MOUSE METHODS 
     void drawMouseCursor(char grid[GRID_HEIGHT][GRID_WIDTH], const Radar& radar);
     void updateMouseControl(std::vector<Target>& targets, const Radar& radar);
     Vector2D getMouseWorldPosition(const Radar& radar) const;
     void handleMouseEvents();
-    // ========== END PHASE 7 METHODS ==========
+    //  END PHASE 7 METHODS 
     
     // Manual stack operations
     void pushFrame(const char grid[GRID_HEIGHT][GRID_WIDTH], double sweepAngle);
@@ -126,7 +126,6 @@ public:
     void updateFrameRate();
     double getFrameRate() const { return frameRate; }
     
-    // ========== PHASE 7: MOUSE CONTROL PUBLIC INTERFACE ==========
     bool isMouseControlEnabled() const { return mouseControlEnabled; }
     void toggleMouseControl(bool enable) { 
         mouseControlEnabled = enable; 
@@ -152,7 +151,7 @@ public:
             toggleMouseControl(true);
         }
     }
-    // ========== END PHASE 7 PUBLIC INTERFACE ==========
+    //  END PHASE 7 PUBLIC INTERFACE 
     
     // Clear screen
     static void clearScreen();

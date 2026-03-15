@@ -31,7 +31,7 @@ static void lblDraw(ImDrawList*dl,ImVec2 p,ImU32 col,const char*s){
     dl->AddText(p,col,s);
 }
 
-// ── Internal draw functions ───────────────────────────────────
+//  Internal draw functions 
 static void drawRings(ImDrawList*dl,ImVec2 c,float R){
     // Spokes
     for(int a=0;a<360;a+=30)
@@ -182,7 +182,7 @@ static void drawBlips(ImDrawList*dl,ImVec2 c,float sc,
     }
 }
 
-// ── Public entry point ────────────────────────────────────────
+//  Public entry point 
 void renderRadarWidget(const Radar&radar,
                        const vector<Target>&targets,
                        Target*mouseTarget,
@@ -197,7 +197,7 @@ void renderRadarWidget(const Radar&radar,
     float cH=av.y-HH-FH;
     if(cH<80.f) cH=80.f;
 
-    // ── Header bar ───────────────────────────────────────────
+    //  Header bar 
     {
         ImVec2 hp=ImGui::GetCursorScreenPos();
         // reserve space first so text renders on top of background
@@ -220,7 +220,7 @@ void renderRadarWidget(const Radar&radar,
         }
     }
 
-    // ── Scope canvas ─────────────────────────────────────────
+    //  Scope canvas 
     ImVec2 orig=ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("##scope",{cW,cH});
 
@@ -261,7 +261,7 @@ void renderRadarWidget(const Radar&radar,
     dl->AddLine({ctr.x,ctr.y-13},{ctr.x,ctr.y+13},IM_COL32(0,215,0,255),1.5f);
     lblDraw(dl,{ctr.x+14,ctr.y+9},IM_COL32(0,215,0,255),"GUN");
 
-    // ── Explosion effects ────────────────────────────────────
+    //  Explosion effects 
     for(const auto&ex : g_explosions){
         float t = ex.age / ex.maxAge;          // 0..1 progress
         float easing = 1.f - t*t;             // fast-out
@@ -306,8 +306,7 @@ void renderRadarWidget(const Radar&radar,
         }
     }
 
-    // ── Intercept countdown beam ──────────────────────────────
-    // While a shot is in flight, draw a pulsing line from GUN to target
+    //  Intercept countdown beam 
     if(g_engageTimer > 0.0 && radar.isEngaged()){
         // Find target world position
         // We don't have targets here, but we can draw from centre outward
@@ -334,7 +333,7 @@ void renderRadarWidget(const Radar&radar,
 
     dl->PopClipRect();
 
-    // ── Footer bar ───────────────────────────────────────────
+    //  Footer bar 
     {
         ImVec2 fp=ImGui::GetCursorScreenPos();
         ImGui::Dummy({cW,FH});

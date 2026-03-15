@@ -13,12 +13,12 @@ using namespace std;
 #define M_PI 3.14159265358979323846
 #endif
 
-// ── Shared sim state (defined in GuiMain) ────────────────────
+//  Shared sim state 
 extern bool   g_simPaused;
 extern double g_engageTimer;
 extern int    g_killCount;
 
-// ── Helpers ──────────────────────────────────────────────────
+//  Helpers 
 static mt19937& RNG(){ static mt19937 r(random_device{}()); return r; }
 static double   rnd(double a,double b){
     return a+uniform_real_distribution<double>(0,1)(RNG())*(b-a);
@@ -62,7 +62,7 @@ static void SH(const char* label, ImVec4 accent={.18f,.80f,.18f,1.f}){
     ImGui::SetCursorPosY(ImGui::GetCursorPosY()+2);
 }
 
-// ── Simple kv table rows ─────────────────────────────────────
+//  Simple kv table rows 
 static void KV(const char*k,const char*fmt,...){
     ImGui::TableNextRow();
     ImGui::TableSetColumnIndex(0);
@@ -80,15 +80,13 @@ static void KVC(const char*k,ImVec4 c,const char*fmt,...){
     ImGui::TextColored(c,"%s",b);
 }
 
-// ============================================================
 //  TRACK PANEL  (left column, upper tab)
-// ============================================================
 void renderTrackPanel(const Radar&radar,
                       const vector<Target>&targets,
                       Target*mt,
                       string&selectedId)
 {
-    // ── Counts ───────────────────────────────────────────────
+    //  Counts 
     int total=0,inR=0,htl=0,frn=0;
     for(const auto&t:targets){
         total++;
@@ -98,7 +96,7 @@ void renderTrackPanel(const Radar&radar,
         }
     }
 
-    // ── Summary strip ────────────────────────────────────────
+    //  Summary strip 
     SH("ACTIVE TRACKS");
     ImGui::Spacing();
 
@@ -118,10 +116,7 @@ void renderTrackPanel(const Radar&radar,
     }
     ImGui::Spacing();
 
-    // ── Target table ─────────────────────────────────────────
-    // Columns sized to fit comfortably in a 420px panel
-    // ID(95) IFF(48) Dist(60) Alt(55) Spd(58) Brg(70) Thr(58) = 444px
-    // With ScrollY the scrollbar takes ~10px so we use slightly smaller widths
+    //  Target table 
     if(ImGui::BeginTable("tt",7,
         ImGuiTableFlags_Borders     |
         ImGuiTableFlags_RowBg       |
@@ -202,7 +197,7 @@ void renderTrackPanel(const Radar&radar,
         ImGui::EndTable();
     }
 
-    // ── Selected target detail card ──────────────────────────
+    //  Selected target detail card 
     if(!selectedId.empty()){
         // Find selected target
         const Target*sel=nullptr;
@@ -261,7 +256,7 @@ void renderTrackPanel(const Radar&radar,
         }
     }
 
-    // ── Mouse target live card ────────────────────────────────
+    //  Mouse target live card 
     if(mt && radar.isInRange(*mt)){
         ImGui::Spacing();
         SH("LIVE MOUSE TRACK",{.90f,.28f,.28f,1.f});
@@ -285,9 +280,7 @@ void renderTrackPanel(const Radar&radar,
     }
 }
 
-// ============================================================
-//  CONTROLS PANEL  (left column, lower tab)
-// ============================================================
+//  CONTROLS PANEL 
 void renderControlsPanel(Radar&radar,
                          vector<Target>&targets,
                          bool&mouseAsTarget)
@@ -297,7 +290,7 @@ void renderControlsPanel(Radar&radar,
     static float spdMul=1.0f;
     static map<string,Vector2D> mp;
 
-    // ── Radar parameters ─────────────────────────────────────
+    //  Radar parameters 
     SH("RADAR PARAMETERS");
     ImGui::Spacing();
 
@@ -315,7 +308,7 @@ void renderControlsPanel(Radar&radar,
     ImGui::SameLine();
     ImGui::TextColored({.4f,.6f,.4f,1},"(auto: ~8s/rot)");
 
-    // ── Simulation ───────────────────────────────────────────
+    //  Simulation 
     ImGui::Spacing();
     SH("SIMULATION CONTROL",{.75f,.62f,.1f,1.f});
     ImGui::Spacing();
@@ -339,7 +332,7 @@ void renderControlsPanel(Radar&radar,
     ImGui::SliderFloat("##spm",&spdMul,0.1f,6.f,"Target Speed Multiplier: %.1fx");
     ImGui::TextColored({.38f,.58f,.38f,1},"  Applied to newly spawned targets");
 
-    // ── Target management ────────────────────────────────────
+    // Target management 
     ImGui::Spacing();
     SH("TARGET MANAGEMENT",{.85f,.72f,.10f,1.f});
     ImGui::Spacing();
@@ -397,7 +390,7 @@ void renderControlsPanel(Radar&radar,
     }
     ImGui::Spacing();
 
-    // ── System status ─────────────────────────────────────────
+    // System status 
     SH("SYSTEM STATUS",{.32f,.60f,.90f,1.f});
     ImGui::Spacing();
 
@@ -441,9 +434,7 @@ void renderControlsPanel(Radar&radar,
     }
 }
 
-// ============================================================
-//  FIRE CONTROL  (bottom-right, tab 1)
-// ============================================================
+//  FIRE CONTROL  
 void renderFireControl(Radar&radar,const vector<Target>&targets){
     SH("FIRE CONTROL SYSTEM",{.92f,.18f,.18f,1.f});
     const Gun&gun=radar.getDefenseGun();
@@ -483,7 +474,7 @@ void renderFireControl(Radar&radar,const vector<Target>&targets){
 
         ImGui::PushID(i);
 
-        // ── Priority + title bar (always visible, non-collapsible) ───
+        // Priority + title bar
         {
             ImVec2 bp=ImGui::GetCursorScreenPos();
             float  bw=ImGui::GetContentRegionAvail().x;
@@ -518,7 +509,7 @@ void renderFireControl(Radar&radar,const vector<Target>&targets){
             }
         }
 
-        // ── Solution table — always shown ────────────────────
+        //Solution table
         if(ImGui::BeginTable("fsol",2,
             ImGuiTableFlags_Borders|ImGuiTableFlags_RowBg,{0,0})){
             ImGui::TableSetupColumn("Parameter",
@@ -589,9 +580,8 @@ void renderFireControl(Radar&radar,const vector<Target>&targets){
     }
 }
 
-// ============================================================
 //  THREAT PANEL  (bottom-right, tab 2)
-// ============================================================
+
 void renderThreatPanel(const Radar&radar,
                        const vector<Target>&targets,
                        const char logBuf[][80], int logN)
@@ -640,7 +630,7 @@ void renderThreatPanel(const Radar&radar,
         ImGui::TextColored({.22f,.88f,.22f,1},"LOW %d",low);
     }
 
-    // ── Detection log ─────────────────────────────────────────
+    // Detection log
     ImGui::Spacing();
     SH("DETECTION LOG",{.38f,.65f,.92f,1.f});
     ImGui::Spacing();
@@ -656,7 +646,7 @@ void renderThreatPanel(const Radar&radar,
         ImGui::SetScrollHereY(1.f);
     ImGui::EndChild();
 
-    // ── Reference ─────────────────────────────────────────────
+    // Reference 
     ImGui::Spacing();
     SH("REFERENCE",{.55f,.55f,.55f,1.f});
     ImGui::Spacing();
