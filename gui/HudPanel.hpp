@@ -7,13 +7,15 @@
 #include <vector>
 #include <string>
 
-// Render target information panel
-void renderTargetInfoPanel(const Radar& radar, const std::vector<Target>& targets, Target* mouseTarget = nullptr);
+// Left panel tabs
+void renderTrackPanel   (const Radar& radar, const std::vector<Target>& targets,
+                         Target* mouseTarget, std::string& selectedId);
+void renderControlsPanel(Radar& radar, std::vector<Target>& targets,
+                         bool& mouseAsTarget);
 
-// Render system controls panel
-void renderSystemControls(Radar& radar, std::vector<Target>& targets, bool& mouseAsTarget);
+// Bottom-right tabs
+void renderFireControl  (Radar& radar, const std::vector<Target>& targets);
+void renderThreatPanel  (const Radar& radar, const std::vector<Target>& targets,
+                         const char logBuf[][80], int logN);
 
-// Render firing solutions panel
-void renderFiringSolutions(const Radar& radar, const std::vector<Target>& targets);
-
-#endif // HUDPANEL_HPP
+#endif

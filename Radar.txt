@@ -35,7 +35,7 @@ ii)Distance, height and Displacement of the flying object from the gun.(also upd
 iii)Angle from the the ground and directin of the air defence gun so that it may shoot the flying object.
 iv)The Radar interface(for now on terminal)
 
-AntiAircraftRadar/          # git repo root
+DSA_Project/          # git repo root
 │
 ├── src/                     # every .cpp
 │   ├── main.cpp            # game loop, glue code only
@@ -63,12 +63,10 @@ AntiAircraftRadar/          # git repo root
 ├── gui/                     # ***EMPTY FOR NOW*** (Dear ImGui later)
 │   ├── GuiMain.cpp
 │   ├── RadarWidget.cpp
-│   └── HudPanel.cpp
-│
-├── tests/                   # unit tests (GoogleTest or Catch2)
-│   ├── test_main.cpp
-│   ├── test_target.cpp
-│   └── test_gun.cpp
+│   ├──HudPanel.cpp
+│   ├──imgui/
+│   └──glfw/
+│   
 │
 ├── build/                   # .gitignore-ed artefacts
 ├── scripts/
@@ -137,10 +135,18 @@ Phase11:
 | **Phase 2**  | One object correctly updates & reports its kinematics     | • `Target` object stores previous states in an **array** or **linked list**  <br>• Use of **pointers** for dynamic state updates | • Finite difference method (Δx/Δt, Δv/Δt) for speed & acceleration  <br>• Recursion for time-step updates                         | Implement kinematic calculations and understand real-time state changes.                          |
 | **Phase 3**  | Console logs show detections entering/leaving range       | • **Queue** (linked list or array) for detection events  <br>• **Circular linked list** for continuous sweep rotation            | • Linear search to check if object within radius  <br>• Enqueue/dequeue for detection processing                                  | Radar begins detecting dynamic targets; manage detection pipeline efficiently.                    |
 | **Phase 4**  | Gun outputs firing solution like “30° NE”                 | • `Gun` class as ADT  <br>• **Tree (expression tree)** to evaluate firing equations                                              | • Trigonometric functions for elevation & azimuth  <br>• Expression tree evaluation (recursive)                                   | Model fire-control computation mathematically, separating logic from data.                        |
-| **Phase 5**  | Text-only real-time terminal output                       | • **2D array (grid)** for ASCII radar  <br>• **Queue** for screen refresh operations                                             | • Recursive/iterative redraw loop  <br>• Coordinate-to-grid mapping algorithm                                                     | Render real-time radar visuals; manage screen updates efficiently.                                |
+| **Phase 5**  | Text-only real-time terminal output                       | • **2D array (grid)** for ASCII radar  <br>• **Queue** for screen refresh operations                                             | • Iterative redraw loop  <br>• Coordinate-to-grid mapping algorithm                                                               | Render real-time radar visuals; manage screen updates efficiently.                                |
 | **Phase 6**  | Live ASCII radar updating every frame                     | • **Circular linked list** for sweep rotation (0–360°)  <br>• **Stack** for undoing last frame if needed                         | • Timer-based recursive calls  <br>• Double-buffering logic with stack push/pop                                                   | Achieve continuous radar sweep effect.                                                            |
 | **Phase 7**  | Mouse controls target motion                              | • `Target` position stored in **array/vector**  <br>• Use of **pointers** for direct updates                                     | • Event-driven update algorithm (Δx, Δy per frame)  <br>• Kinematic equations for trajectory                                      | Real-time input translates into physical movement inside radar grid.                              |
 | **Phase 8**  | Radar distinguishes friendlies vs unknowns                | • **Hash Table** (`unordered_map<string, Target>`) for friendlies  <br>• **Array/List** for unknowns                             | • Hash lookup for O(1) friend/foe check  <br>• Sorting by distance (Quick Sort / Merge Sort)  <br>• Binary search in sorted array | Implement Identification Friend or Foe (IFF) system; efficient classification and prioritization. |
 | **Phase 9**  | GUI-ready modular core                                    | • Maintain logic in **abstract ADTs** (`Radar`, `Gun`, `Target`)  <br>• No data coupling to UI                                   | • Observer pattern for update notifications  <br>• Encapsulation and modular design                                               | Clean separation between core logic and presentation layer — GUI-ready architecture.              |
 | **Phase 10** | All tests green ✅                                        | • Temporary **arrays/lists** of test inputs  <br>• Mock data structures                                                          | • Unit testing algorithms (sorting, queue ops, search)  <br>• Complexity checks using runtime measurement                         | Validate correctness and performance of algorithms individually.                                  |
 | **Phase 11** | One-command build & run works                             | • — (build scripts only)                                                                                                         | • Automation (bash/batch scripts)                                                                                                 | Ensure reproducibility; project compiles and executes immediately.                                |
+
+
+
+
+scripts\build.bat
+
+
+g++ -std=c++14 -I./include -I./gui -I./gui/imgui -I./gui/imgui/backends src/radar/Radar.cpp src/radar/Target.cpp src/radar/Gun.cpp src/utils/MathUtils.cpp gui/GuiMain.cpp gui/RadarWidget.cpp gui/HudPanel.cpp ./gui/imgui/imgui.cpp ./gui/imgui/imgui_draw.cpp ./gui/imgui/imgui_tables.cpp ./gui/imgui/imgui_widgets.cpp ./gui/imgui/imgui_demo.cpp ./gui/imgui/backends/imgui_impl_glfw.cpp ./gui/imgui/backends/imgui_impl_opengl3.cpp -o build/radar_gui.exe -L./gui/glfw/lib-mingw-w64 -lglfw3 -lopengl32 -lgdi32 -luser32 -mwindows
